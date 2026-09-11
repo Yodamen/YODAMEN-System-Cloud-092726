@@ -93,3 +93,9 @@ Planned focus:
 - completion/cancellation/rebooking event boundaries
 
 Sales/Payments remain a later phase and will consume completed operational events rather than being embedded into Servicing.
+
+
+## Phase 2A - Customers + Booking Foundation
+Status: IMPLEMENTED PACKAGE, awaiting local migration/tests/UI acceptance.
+
+Includes customer master, reservation booking header/service/retail lines, rebooking history, booking cancellation, audit and React pages. Walk-In/Queue, advances, Service Credits and downstream Visit/Sales remain deliberately deferred.

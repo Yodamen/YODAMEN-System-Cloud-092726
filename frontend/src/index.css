@@ -1011,3 +1011,48 @@ p {
     max-height: calc(100vh - 24px);
   }
 }
+
+
+/* Phase 2A Operations */
+.summary-grid.compact-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.summary-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 13px 15px;
+  background: #fff;
+}
+.summary-card span,
+.summary-card strong { display: block; }
+.summary-card span { color: var(--muted); font-size: 0.68rem; font-weight: 700; }
+.summary-card strong { margin-top: 4px; font-size: 1.2rem; }
+.grow-field { min-width: min(420px, 100%); flex: 1; }
+.phase-note {
+  border: 1px solid #ead7a0;
+  border-radius: 10px;
+  padding: 10px 13px;
+  background: #fffaf0;
+  color: #6d571d;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+.segmented-control { display: inline-flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; background: #fff; }
+.segmented-control button { border: 0; border-right: 1px solid var(--border); padding: 9px 13px; background: #fff; font-size: 0.72rem; font-weight: 800; color: #555; }
+.segmented-control button:last-child { border-right: 0; }
+.segmented-control button.active { background: #111; color: #fff; }
+.section-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.section-heading-row h3 { margin: 0; }
+.secondary-button.mini { padding: 7px 10px; font-size: 0.7rem; }
+.line-editor-grid { display: grid; grid-template-columns: minmax(220px, 2fr) 90px minmax(180px, 1fr) auto; align-items: end; gap: 10px; margin-bottom: 10px; }
+.retail-line-grid { grid-template-columns: minmax(220px, 2fr) 90px 130px auto; }
+.line-remove-button { height: 38px; border: 1px solid #ead1d1; border-radius: 8px; padding: 0 10px; background: #fff; color: #a33; font-size: 0.7rem; font-weight: 800; }
+.inline-empty { color: var(--muted); font-size: 0.75rem; padding: 8px 0; }
+.danger-link { color: #b42318; }
+.danger-button { border: 1px solid #b42318; border-radius: 8px; padding: 9px 13px; background: #b42318; color: #fff; font-weight: 800; }
+@media (max-width: 760px) {
+  .summary-grid.compact-summary { grid-template-columns: 1fr; }
+  .line-editor-grid, .retail-line-grid { grid-template-columns: 1fr; align-items: stretch; }
+}

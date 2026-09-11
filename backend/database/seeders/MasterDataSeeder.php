@@ -50,22 +50,40 @@ class MasterDataSeeder extends Seeder
             [
                 'code' => 'BOOKING_SOURCE',
                 'name' => 'Booking Source',
-                'values' => [],
+                'values' => [
+                    ['RESERVATION', 'Reservation'],
+                    ['WALK_IN', 'Walk-in'],
+                ],
             ],
             [
                 'code' => 'CUSTOMER_TYPE',
                 'name' => 'Customer Type',
-                'values' => [],
+                'values' => [
+                    ['NEW', 'New'],
+                    ['RETURNEE', 'Returnee'],
+                ],
             ],
             [
                 'code' => 'GENDER',
                 'name' => 'Gender',
-                'values' => [],
+                'values' => [
+                    ['MALE', 'Male'],
+                    ['FEMALE', 'Female'],
+                    ['PREFER_NOT_TO_SAY', 'Prefer not to say'],
+                ],
             ],
             [
                 'code' => 'LEAD_SOURCE',
                 'name' => 'Lead Source',
-                'values' => [],
+                'values' => [
+                    ['FACEBOOK', 'Facebook'],
+                    ['TIKTOK', 'TikTok'],
+                    ['INSTAGRAM', 'Instagram'],
+                    ['WEBSITE', 'Website'],
+                    ['REFERRAL', 'Referral'],
+                    ['PRINT_MATERIALS', 'Print Materials'],
+                    ['SIGNAGES', 'Signages'],
+                ],
             ],
             [
                 'code' => 'PAYMENT_METHOD',

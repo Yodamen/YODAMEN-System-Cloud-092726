@@ -7,6 +7,8 @@ import LoginPage from '../pages/LoginPage'
 import ReferenceListsPage from '../pages/admin/ReferenceListsPage'
 import ServicesPricingPage from '../pages/admin/ServicesPricingPage'
 import PersonnelPage from '../pages/hr/PersonnelPage'
+import CustomersPage from '../pages/operations/CustomersPage'
+import BookingsPage from '../pages/operations/BookingsPage'
 
 export const router = createBrowserRouter([
   {
@@ -20,6 +22,22 @@ export const router = createBrowserRouter([
         element: <AppLayout />,
         children: [
           { index: true, element: <DashboardPage /> },
+          {
+            path: '/operations/customers',
+            element: (
+              <ModuleRoute module="customers">
+                <CustomersPage />
+              </ModuleRoute>
+            ),
+          },
+          {
+            path: '/operations/bookings',
+            element: (
+              <ModuleRoute module="bookings">
+                <BookingsPage />
+              </ModuleRoute>
+            ),
+          },
           {
             path: '/admin/references',
             element: (

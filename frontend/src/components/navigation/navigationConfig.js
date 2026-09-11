@@ -8,8 +8,8 @@ export const navigationSections = [
   {
     label: 'Operations',
     items: [
-      { label: 'Customers', module: 'customers' },
-      { label: 'Bookings', module: 'bookings' },
+      { label: 'Customers', path: '/operations/customers', module: 'customers', enabled: true },
+      { label: 'Bookings', path: '/operations/bookings', module: 'bookings', enabled: true },
       { label: 'Queuing', module: 'queue' },
       { label: 'Servicing', module: 'servicing' },
       { label: 'Service Balances', module: 'service-balances' },

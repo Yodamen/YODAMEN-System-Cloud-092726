@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\V1\Admin\ServicesPricingController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BootstrapController;
 use App\Http\Controllers\Api\V1\Hr\PersonnelController;
+use App\Http\Controllers\Api\V1\Operations\BookingController;
+use App\Http\Controllers\Api\V1\Operations\CustomerController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -27,6 +29,34 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 
         Route::get('/bootstrap', BootstrapController::class);
+
+        Route::prefix('operations')->group(function () {
+            Route::get('/customers', [CustomerController::class, 'index'])
+                ->middleware('permission:customers,VIEW');
+            Route::get('/customers/{customer}', [CustomerController::class, 'show'])
+                ->middleware('permission:customers,VIEW');
+            Route::post('/customers', [CustomerController::class, 'store'])
+                ->middleware('permission:customers,CREATE');
+            Route::put('/customers/{customer}', [CustomerController::class, 'update'])
+                ->middleware('permission:customers,EDIT');
+            Route::patch('/customers/{customer}/toggle', [CustomerController::class, 'toggle'])
+                ->middleware('permission:customers,TOGGLE');
+
+            Route::get('/bookings/bootstrap', [BookingController::class, 'bootstrap'])
+                ->middleware('permission:bookings,VIEW');
+            Route::get('/bookings', [BookingController::class, 'index'])
+                ->middleware('permission:bookings,VIEW');
+            Route::get('/bookings/{booking}', [BookingController::class, 'show'])
+                ->middleware('permission:bookings,VIEW');
+            Route::post('/bookings', [BookingController::class, 'store'])
+                ->middleware('permission:bookings,CREATE');
+            Route::put('/bookings/{booking}', [BookingController::class, 'update'])
+                ->middleware('permission:bookings,EDIT');
+            Route::post('/bookings/{booking}/rebook', [BookingController::class, 'rebook'])
+                ->middleware('permission:bookings,EDIT');
+            Route::post('/bookings/{booking}/cancel', [BookingController::class, 'cancel'])
+                ->middleware('permission:bookings,EDIT');
+        });
 
         Route::prefix('admin')->group(function () {
             Route::get('/roles', [RolePermissionController::class, 'index'])

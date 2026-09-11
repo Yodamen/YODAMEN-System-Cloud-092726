@@ -1,0 +1,65 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Customer extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'business_id',
+        'code',
+        'first_name',
+        'last_name',
+        'mobile_number',
+        'mobile_normalized',
+        'email',
+        'birthday',
+        'gender_reference_id',
+        'address',
+        'lead_source_reference_id',
+        'registration_date',
+        'status',
+        'notes',
+        'created_by',
+        'updated_by',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'birthday' => 'date:Y-m-d',
+            'registration_date' => 'date:Y-m-d',
+        ];
+    }
+
+    public function business(): BelongsTo
+    {
+        return $this->belongsTo(Business::class);
+    }
+
+    public function gender(): BelongsTo
+    {
+        return $this->belongsTo(ReferenceValue::class, 'gender_reference_id');
+    }
+
+    public function leadSource(): BelongsTo
+    {
+        return $this->belongsTo(ReferenceValue::class, 'lead_source_reference_id');
+    }
+
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    public function getFullNameAttribute(): string
+    {
+        return trim($this->first_name.' '.$this->last_name);
+    }
+}

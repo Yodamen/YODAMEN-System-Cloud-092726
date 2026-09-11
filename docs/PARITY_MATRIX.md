@@ -44,3 +44,16 @@ Legend: `DONE` target behavior implemented; `VALIDATE` implemented but pending u
 | Future Inventory | navigation/target rules | FUTURE | FUTURE | FUTURE | FUTURE | FUTURE |
 | Reports | navigation/target rules | FUTURE | FUTURE | read models | FUTURE | FUTURE |
 | Historical Google Sheets data | live sheet rows | importer PLANNED | review report PLANNED | target tables | reconciliation | VERIFY-DATA |
+
+
+## Phase 2A additions
+| Legacy area | Laravel/MySQL | React | Tests | Status |
+|---|---|---|---|---|
+| Customer master CRUD/status | customers + CustomerService | CustomersPage | CustomerTest | Implemented, awaiting local acceptance |
+| Booking reservation CRUD | bookings + BookingService | BookingsPage | BookingTest | Implemented, awaiting local acceptance |
+| Booking service lines | booking_service_lines | Booking modal | BookingTest | Implemented for NEW_SERVICE only |
+| Booking retail snapshot | booking_retail_lines | Booking modal | BookingTest coverage via booking workflow | Implemented |
+| Rebooking history | booking_rebookings | Rebook modal | BookingTest | Implemented |
+| Walk-In -> Booking -> Queue | Deferred to Phase 2B | Disabled | Pending | Correctly deferred |
+| Advance Payment at Booking | Deferred to Payments ledger phase | Informational only | Pending | Correctly deferred |
+| Service Credit claims | Deferred to Package/Service Credit phase | Not enabled | Pending | Correctly deferred |
