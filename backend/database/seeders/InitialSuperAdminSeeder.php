@@ -15,8 +15,33 @@ class InitialSuperAdminSeeder extends Seeder
         $username = strtolower(trim((string) env('YODAMEN_SUPER_ADMIN_USERNAME')));
         $accessCode = trim((string) env('YODAMEN_SUPER_ADMIN_ACCESS_CODE'));
 
-        if ($username === '' || $accessCode === '') {
-            $this->command?->warn('Initial Super Admin was not seeded because YODAMEN_SUPER_ADMIN_USERNAME / ACCESS_CODE are not set.');
+        if ($username === '') {
+            $this->command?->warn('Initial Super Admin was not seeded because YODAMEN_SUPER_ADMIN_USERNAME is not set.');
+            return;
+        }
+
+        $business = Business::query()->where('code', 'YDM')->firstOrFail();
+        $branch = Branch::query()->where('code', 'YDM-SJC')->firstOrFail();
+        $role = Role::query()->where('code', 'ROLE-SA')->firstOrFail();
+
+        $existing = User::query()->where('username', $username)->first();
+
+        if ($existing) {
+            $existing->forceFill([
+                'business_id' => $business->id,
+                'default_branch_id' => $existing->default_branch_id ?: $branch->id,
+                'role_id' => $role->id,
+                'name' => $existing->name ?: env('YODAMEN_SUPER_ADMIN_DISPLAY_NAME', 'Super Admin'),
+                'display_name' => $existing->display_name ?: env('YODAMEN_SUPER_ADMIN_DISPLAY_NAME', 'Super Admin'),
+                'status' => 'ACTIVE',
+            ])->save();
+
+            $this->command?->info('Existing Super Admin preserved. Access Code and force-reset state were not changed.');
+            return;
+        }
+
+        if ($accessCode === '') {
+            $this->command?->warn('Initial Super Admin was not created because YODAMEN_SUPER_ADMIN_ACCESS_CODE is not set.');
             return;
         }
 
@@ -25,26 +50,20 @@ class InitialSuperAdminSeeder extends Seeder
             return;
         }
 
-        $business = Business::query()->where('code', 'YDM')->firstOrFail();
-        $branch = Branch::query()->where('code', 'YDM-SJC')->firstOrFail();
-        $role = Role::query()->where('code', 'ROLE-SA')->firstOrFail();
-
-        User::query()->updateOrCreate(
-            ['username' => $username],
-            [
-                'code' => 'USR-0001',
-                'business_id' => $business->id,
-                'default_branch_id' => $branch->id,
-                'role_id' => $role->id,
-                'name' => env('YODAMEN_SUPER_ADMIN_DISPLAY_NAME', 'Super Admin'),
-                'display_name' => env('YODAMEN_SUPER_ADMIN_DISPLAY_NAME', 'Super Admin'),
-                'email' => env('YODAMEN_SUPER_ADMIN_EMAIL') ?: null,
-                'password' => $accessCode,
-                'status' => 'ACTIVE',
-                'force_reset' => true,
-                'failed_attempts' => 0,
-                'locked_until' => null,
-            ]
-        );
+        User::query()->create([
+            'username' => $username,
+            'code' => 'USR-0001',
+            'business_id' => $business->id,
+            'default_branch_id' => $branch->id,
+            'role_id' => $role->id,
+            'name' => env('YODAMEN_SUPER_ADMIN_DISPLAY_NAME', 'Super Admin'),
+            'display_name' => env('YODAMEN_SUPER_ADMIN_DISPLAY_NAME', 'Super Admin'),
+            'email' => env('YODAMEN_SUPER_ADMIN_EMAIL') ?: null,
+            'password' => $accessCode,
+            'status' => 'ACTIVE',
+            'force_reset' => true,
+            'failed_attempts' => 0,
+            'locked_until' => null,
+        ]);
     }
 }

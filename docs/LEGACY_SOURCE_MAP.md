@@ -1,40 +1,34 @@
 # YODAMEN Legacy Source Map
 
-This map identifies how active Apps Script responsibilities move into canonical React/Laravel/MySQL areas. Historical V-number aliases and repair scripts are evidence, not target runtime architecture.
+Historical V-number aliases and repair scripts are implementation evidence. The target keeps one canonical implementation per use case.
 
 | Legacy source | Purpose/evidence | Target area | Migration status |
 | --- | --- | --- | --- |
-| `Auth.js` | Login, session validation, failed login lock, permissions, Force Reset | Laravel `AuthController`, User security fields, Sanctum, permission middleware | Phase 1A DONE |
-| `RolePermissions2026.js` | Action-level permission matrix; Super Admin restriction; auto-VIEW behavior | `RolePermissionService`, `permissions`, `role_permissions` | Phase 1A DONE |
-| `Audit.js` | Basic append-only activity log | `AuditService`, `audit_logs`, request correlation | Phase 1A DONE |
-| `Code.js` | Apps Script entry/bootstrap | React router/app shell + Laravel bootstrap API | Phase 1A DONE |
-| `Config.js` / `Setup.js` | Business, branch, timezone, roles and seed defaults | Business/Branch/Role seeders and config | Phase 1A DONE |
-| `Admin.js` | Admin masters, permission setup | Admin APIs/services by phase | Security subset DONE; remaining PLANNED |
-| `AdminHTML.html` | Admin UI | React admin feature pages | PLANNED |
-| `Index.html` / `App.html` | Global shell/router/navigation | React router, `AppLayout`, sidebar | Foundation shell DONE |
-| `Styles.html` / `UXPolish.html` | Legacy visual system and patches | React design tokens/components | Foundation shell DONE; parity polish ongoing |
-| `Database.js` | Sheet CRUD/scans | Eloquent/SQL repositories/actions | Retired pattern |
-| `Customer.js` / `CustomerHTML.html` | Customer master/history | Customer domain + React page | PLANNED |
-| `BookingVisits.js` / HTML / setup | Booking, Queue, Visit lifecycle | Operations domain | PLANNED |
-| `ReceptionWalkInPermission2026.js` | Walk-In permission edge case | Operations policies/use case | PLANNED |
-| `QueueVisitSetup.js` | Legacy queue/visit sheet structure | Operations migrations | PLANNED |
-| `OperationsPerformance.js` / HTML | Operations screens and mixed performance behavior | Split React Operations pages/components | PLANNED |
-| `ServiceCredit.js` / setup | Package/service-credit entitlement behavior | Packages domain | PLANNED |
-| `Sales.js` / `SalesHTML.html` / `SalesSetup.js` | Sale/Payment base and Transactions UI | Sales domain + React Transactions | PLANNED |
-| `ServicingPaymentAllocation.js` | Advance/checkout/collection allocation and package-balance targeting | PaymentApplication service/actions | PLANNED |
-| `SalesPayrollBridge.js` | Finalization waterfall and commission/package bridge | Canonical FinalizeCheckout action + events | PLANNED |
-| `SalesServiceLineSettlement2026.js` | Parent Pending, finalized line settlement, V33 integrity repair | Settlement read model + SQL uniqueness | PLANNED; repair logic import-only |
-| `ServiceBalanceFinancial2026.js` | Per-enrollment package financial monitoring | PackageEnrollment financial read model | PLANNED |
-| `CommissionMultiStaffFix.js` | Multi-staff service-line commission reconciliation | Commission resolver/reconciliation | PLANNED |
-| `SalesDashboard.js` / rankings | Sales KPI/ranking views | SQL read models + React dashboard | PLANNED |
-| `ZReadings.js` / HTML | Read-only daily sales report | Persistent ZReading close aggregate | PLANNED |
-| `HRPayroll.js` / `HRHTML.html` | Personnel, compensation, CA, commissions, payroll | HR domains split into focused services/pages | PLANNED |
-| `YodamenAttendanceV19.gs.js` | Self-service/admin attendance with proof | Attendance domain/private storage | PLANNED |
-| `YodamenHRServicingV6Bridge.js` | HR/servicing compatibility bridge | Retired after canonical domain boundaries | PLANNED/retire |
-| `PartnerProfitProfileV2.js` | Partner profile enrichment | Personnel/Profit Sharing read model | PLANNED |
-| `ProfitSharing.js` / HTML | Profit Sharing run lifecycle | ProfitSharing domain | PLANNED |
-| `OperationsPaymentStatus.js` / `OperationsPaymentFastBridge.js` | Payment-status compatibility helpers | Derived Laravel financial read models | PLANNED/retire wrappers |
-| Diagnostics (`BookingDiagnostic*`, `PaymentDebug`, `PaymentTraceDiagnostic`, `HRPayrollV9Diagnostics`) | Debug/integrity knowledge | Automated tests/import validators | Do not port as runtime |
-| `DevelopmentReset.js` | Test-data cascade reset | Test factories/seeders/dev-only Artisan command | Do not expose in production |
-| `ModalLayoutGuard.html` | DOM compatibility patch | React component layout | Retired pattern |
-| `SalesAccessBridge2026.js`, `UserAccessBranding2026.js`, `PublicBranding2026.js` | Access/branding compatibility | Canonical permission/bootstrap/branding services | Security subset DONE; branding PLANNED |
+| `Auth.js` | Login/session/failed lock/Force Reset | Laravel Auth + Sanctum | Phase 1A DONE |
+| `RolePermissions2026.js` | action permissions/Super Admin guard | permission middleware/service | Phase 1A DONE |
+| `Audit.js` | activity log | SQL AuditService | Phase 1A DONE |
+| `Code.js`, `Config.js`, `Setup.js` | bootstrap/business/branch/timezone | foundation config/models | Phase 1A DONE |
+| `Admin.js` Reference Lists | categories/options/create/edit/toggle | ReferenceDataService + API | Phase 1B IMPLEMENTED |
+| `AdminHTML.html` Reference Lists | admin reference UI | React ReferenceListsPage | Phase 1B IMPLEMENTED |
+| `ServicesSetup.js` | DB_Services, DB_ServicePrices, reference seeds | master-data migration/seeder | Phase 1B IMPLEMENTED |
+| `Services.js` | service CRUD and effective price periods | ServiceCatalogService | Phase 1B IMPLEMENTED |
+| `ServicesHTML.html` | service/pricing UI | React ServicesPricingPage | Phase 1B IMPLEMENTED |
+| `HRPayroll.js` Personnel V10 | Employee/Partner, Position, Hourly, OT, Profit profile | PersonnelService/model | Phase 1B IMPLEMENTED |
+| `HRHTML.html` Personnel | personnel modal/table | React PersonnelPage | Phase 1B IMPLEMENTED |
+| `Database.js` | generic sheet CRUD/scans | Eloquent/SQL | retired pattern |
+| `Customer.js` / HTML | customer master/history | Customer domain | PLANNED |
+| `BookingVisits.js` / setup/UI | Booking → Queue → Visit | Operations domain | PLANNED |
+| `ReceptionWalkInPermission2026.js` | Walk-In permissions | Operations policy | PLANNED |
+| `OperationsPerformance.js` / HTML | Operations screens | split React pages/actions | PLANNED |
+| `ServiceCredit.js` / setup | package/service credit | Packages domain | PLANNED |
+| `Sales.js` / `SalesHTML.html` | Sale/Payment base + Transactions | Sales domain | PLANNED |
+| `ServicingPaymentAllocation.js` | allocations/package target | PaymentApplication actions | PLANNED |
+| `SalesPayrollBridge.js` | financial-finalization waterfall | FinalizeCheckout domain action/events | PLANNED |
+| `SalesServiceLineSettlement2026.js` | parent Pending + line settlement + duplicate repair | read models + SQL constraints | PLANNED; repair import-only |
+| `ServiceBalanceFinancial2026.js` | per-enrollment financials | Package Enrollment read model | PLANNED |
+| `CommissionMultiStaffFix.js` | service-line commission reconciliation | Commission domain | PLANNED |
+| `ZReadings.js` | daily sales view | persistent Z-reading close | PLANNED |
+| `YodamenAttendanceV19.gs.js` | self/admin attendance proof | Attendance domain/storage | PLANNED |
+| `ProfitSharing.js` | Profit Sharing lifecycle | ProfitSharing domain | PLANNED |
+| Diagnostics/repair scripts | debugging and dirty-data evidence | tests/import validators | do not port runtime |
+| `DevelopmentReset.js` | development cascade reset | factories/dev Artisan command | production route prohibited |

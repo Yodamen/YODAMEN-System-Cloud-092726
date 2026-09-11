@@ -1,6 +1,6 @@
 # YODAMEN Migration Status
 
-**Current phase:** Phase 1A, Foundation Configuration + Identity/Security Skeleton  
+**Current phase:** Phase 1B, Master Data Foundations  
 **Blueprint:** Approved September 11, 2026  
 **Target:** React + Vite / Laravel / MySQL (`yodamen_dev`)
 
@@ -16,50 +16,80 @@ Status: **COMPLETE**
 
 ## Phase 1A
 
-Status: **IMPLEMENTED IN SOURCE, VALIDATION REQUIRED IN USER ENVIRONMENT**
+Status: **ACCEPTED / WORKING BASELINE**
+
+Validated in the user environment:
+
+- MySQL migrations completed.
+- Foundation seeders completed.
+- React production build passed.
+- Username + Access Code login worked.
+- Force Reset worked.
+- New Access Code was accepted.
+- Git checkpoint created:
+  - `development`
+  - `stable/approved`
+
+Foundation includes Sanctum authentication, business/branch/users/roles/permissions, SQL audit logging, request correlation IDs, code sequencing, idempotency infrastructure, Asia/Manila clock, and authenticated React shell.
+
+## Phase 1B
+
+Status: **IMPLEMENTED IN SOURCE, USER-ENVIRONMENT VALIDATION REQUIRED**
 
 Implemented:
 
-- MySQL `yodamen_dev` environment template.
-- Asia/Manila application/business clock.
-- Sanctum stateful SPA middleware configuration.
-- Username + Access Code authentication.
-- 5-attempt / 15-minute lock behavior.
-- 360-minute session configuration target.
-- Force Reset flow.
-- Business, Branch, Role, Permission foundation schema.
-- Protected Super Admin role.
-- Server-side module/action permission middleware.
-- Append-only SQL audit trail with request correlation IDs.
-- Durable code sequence service.
-- Reusable idempotency request service.
-- Environment-safe initial Super Admin seeding with no committed password.
-- React authenticated dark/gold shell.
-- Permission-aware navigation; non-migrated modules remain disabled.
-- Foundation Pest tests.
-- Required continuity documentation.
+- normalized `reference_groups` and `reference_values`
+- safe system reference catalog based on current Apps Script categories
+- stable system codes with editable labels
+- Services master
+- effective-dated Service Prices
+- Single Session → exactly one session rule
+- Service detail editing separate from price changes
+- Personnel master
+- Employee vs Partner separation
+- Managing Partner position rule
+- Employment Type separate from Personnel Type
+- Hourly Rate
+- OT Entitled + configurable OT Multiplier
+- Guaranteed Daily Pay vs Commission profile
+- No Operational Compensation option
+- service eligibility and commission eligibility flags
+- linked User uniqueness
+- partner Profit Sharing eligibility/effective profile
+- server-side permission enforcement
+- mutation audit events
+- React Reference Lists page
+- React Services & Pricing page
+- React Personnel page
+- automated master-data tests
+- existing Super Admin seeder hardened so reruns do not reset changed credentials
 
-Validation gates before Phase 1B:
+Validation gate before Phase 2:
 
-1. Run MySQL migrations against `yodamen_dev`.
-2. Seed Foundation data and an environment-provided initial Super Admin.
-3. Run Pest suite.
-4. Run frontend ESLint and production build.
-5. Verify browser Sanctum cookie login using matching frontend/backend hostnames.
-6. Verify Force Reset modal and re-login with new Access Code.
-7. Verify Manager cannot access permission APIs.
-8. Verify ROLE-SA cannot be restricted.
-9. Confirm audit rows for login, access-code change, denied permission and role-permission update.
+1. Apply migration.
+2. Run `MasterDataSeeder`.
+3. Run backend tests.
+4. Run frontend lint/build.
+5. Validate Reference Lists create/edit/toggle.
+6. Validate Service create/edit/effective price history.
+7. Validate Employee Personnel.
+8. Validate Partner/Managing Partner rules.
+9. Confirm audit rows are written.
+10. Commit approved Phase 1B checkpoint.
 
 ## Next phase after acceptance
 
-**Phase 1B: Core Masters required by Operations**
+**Phase 2: Operations Core**
 
 Planned focus:
 
-- Reference data foundation used by operational modules.
-- Services and pricing normalization.
-- Personnel/position baseline needed before multi-staff servicing and commission work.
-- Branding/settings UI parity where required by the application shell.
+- Customers
+- Booking
+- Walk-In through Booking
+- Queue
+- Visit
+- Visit Services
+- Servicing
+- completion/cancellation/rebooking event boundaries
 
-No Booking/Sales/Payment/Package/Commission/Payroll implementation should begin until the Phase 1A gate passes.
+Sales/Payments remain a later phase and will consume completed operational events rather than being embedded into Servicing.

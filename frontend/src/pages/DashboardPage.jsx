@@ -7,11 +7,14 @@ export default function DashboardPage() {
     <div className="page-stack">
       <section className="page-heading">
         <div>
-          <span className="eyebrow gold">Foundation</span>
+          <span className="eyebrow gold">Master Data Foundation</span>
           <h1>Dashboard</h1>
-          <p>YODAMEN React + Laravel foundation is active. Business modules remain intentionally disabled until their migration phases.</p>
+          <p>
+            YODAMEN now has authenticated foundation controls plus Reference Lists,
+            Services &amp; Pricing, and Personnel master data.
+          </p>
         </div>
-        <span className="status-pill success">Phase 1A</span>
+        <span className="status-pill success">Phase 1B</span>
       </section>
 
       <section className="metric-grid">
@@ -41,15 +44,16 @@ export default function DashboardPage() {
         <div className="card-header">
           <div>
             <h2>Migration status</h2>
-            <p>Foundation controls are installed before operational replication begins.</p>
+            <p>Master records are established before operational transactions are migrated.</p>
           </div>
         </div>
         <div className="foundation-checks">
           <div><span>✓</span> Sanctum session authentication</div>
           <div><span>✓</span> Role and action permissions</div>
+          <div><span>✓</span> Reference Lists</div>
+          <div><span>✓</span> Effective-dated Services &amp; Pricing</div>
+          <div><span>✓</span> Personnel and compensation profile</div>
           <div><span>✓</span> SQL audit trail</div>
-          <div><span>✓</span> Asia/Manila business clock</div>
-          <div><span>✓</span> Code sequence and idempotency infrastructure</div>
         </div>
       </section>
     </div>

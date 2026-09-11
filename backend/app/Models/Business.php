@@ -33,4 +33,19 @@ class Business extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    public function referenceGroups(): HasMany
+    {
+        return $this->hasMany(ReferenceGroup::class);
+    }
+
+    public function services(): HasMany
+    {
+        return $this->hasMany(Service::class);
+    }
+
+    public function personnel(): HasMany
+    {
+        return $this->hasMany(Personnel::class);
+    }
 }
