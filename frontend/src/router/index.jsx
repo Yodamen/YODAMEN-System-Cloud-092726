@@ -10,6 +10,7 @@ import PersonnelPage from '../pages/hr/PersonnelPage'
 import CustomersPage from '../pages/operations/CustomersPage'
 import BookingsPage from '../pages/operations/BookingsPage'
 import QueuePage from '../pages/operations/QueuePage'
+import ServicingPage from '../pages/operations/ServicingPage'
 
 export const router = createBrowserRouter([
   {
@@ -44,6 +45,14 @@ export const router = createBrowserRouter([
             element: (
               <ModuleRoute module="queue">
                 <QueuePage />
+              </ModuleRoute>
+            ),
+          },
+          {
+            path: '/operations/servicing',
+            element: (
+              <ModuleRoute module="servicing">
+                <ServicingPage />
               </ModuleRoute>
             ),
           },

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, getApiErrorMessage } from '../../api/client'
+import ActionMenu from '../../components/common/ActionMenu'
 import Modal from '../../components/common/Modal'
 import { useAuth } from '../../context/AuthContext'
 
@@ -166,11 +167,7 @@ export default function PersonnelPage() {
   return (
     <div className="page-stack">
       <section className="page-heading">
-        <div>
-          <span className="eyebrow gold">HR &amp; Payroll</span>
-          <h1>Personnel</h1>
-          <p>Maintain Employee/Partner identity, position, operational compensation, OT configuration, user linkage, and partner profit-sharing profile.</p>
-        </div>
+        <h1>Personnel</h1>
         {hasPermission('employees', 'CREATE') && (
           <button className="primary-button" type="button" onClick={openCreate}>+ Add Personnel</button>
         )}
@@ -219,11 +216,9 @@ export default function PersonnelPage() {
                     </td>
                     <td>{record.profit_sharing_eligible ? `${record.profit_sharing_percentage}%` : 'Not eligible'}</td>
                     <td><span className={`status-pill ${record.status === 'ACTIVE' ? 'success' : 'neutral'}`}>{record.status}</span></td>
-                    <td className="row-actions">
-                      {hasPermission('employees', 'EDIT') && (
-                        <button className="link-button" type="button" onClick={() => openEdit(record)}>Edit</button>
-                      )}
-                    </td>
+                    <td className="action-cell"><ActionMenu items={[
+                      hasPermission('employees', 'EDIT') ? { label: 'Edit', onClick: () => openEdit(record) } : null,
+                    ]} /></td>
                   </tr>
                 ))}
                 {!personnel.length && (
@@ -330,20 +325,6 @@ export default function PersonnelPage() {
               </label>
             )}
 
-            {!noOperationalComp && (
-              <>
-                <label className="checkbox-field">
-                  <input type="checkbox" checked={form.ot_entitled} onChange={(event) => updateForm('ot_entitled', event.target.checked)} />
-                  <span><strong>OT Entitled</strong><small>If disabled, OT hours will not feed compensation.</small></span>
-                </label>
-
-                <label className="form-field">
-                  OT Multiplier
-                  <input type="number" min="1" step="0.01" disabled={!form.ot_entitled} value={form.ot_multiplier} onChange={(event) => updateForm('ot_multiplier', event.target.value)} />
-                </label>
-              </>
-            )}
-
             <label className="form-field">
               Hire / Start Date
               <input type="date" value={form.hire_date} onChange={(event) => updateForm('hire_date', event.target.value)} />
@@ -356,6 +337,22 @@ export default function PersonnelPage() {
                 <option value="INACTIVE">Inactive</option>
               </select>
             </label>
+
+            {!noOperationalComp && (
+              <div className="form-span-2 section-box">
+                <h3>Overtime Eligibility</h3>
+                <div className="checkbox-grid">
+                  <label className="checkbox-field">
+                    <input type="checkbox" checked={form.ot_entitled} onChange={(event) => updateForm('ot_entitled', event.target.checked)} />
+                    <span><strong>OT Entitled</strong><small>Approved OT hours may feed compensation.</small></span>
+                  </label>
+                  <label className="form-field">
+                    OT Multiplier
+                    <input type="number" min="1" step="0.01" disabled={!form.ot_entitled} value={form.ot_multiplier} onChange={(event) => updateForm('ot_multiplier', event.target.value)} />
+                  </label>
+                </div>
+              </div>
+            )}
 
             <div className="form-span-2 section-box">
               <h3>Service &amp; Commission Eligibility</h3>

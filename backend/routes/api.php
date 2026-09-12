@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Hr\PersonnelController;
 use App\Http\Controllers\Api\V1\Operations\BookingController;
 use App\Http\Controllers\Api\V1\Operations\CustomerController;
 use App\Http\Controllers\Api\V1\Operations\QueueController;
+use App\Http\Controllers\Api\V1\Operations\ServicingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -71,6 +72,27 @@ Route::prefix('v1')->group(function () {
                 ->middleware(['permission:queue,CREATE', 'permission:bookings,CREATE']);
             Route::post('/queue/{queueEntry}/cancel', [QueueController::class, 'cancel'])
                 ->middleware('permission:queue,EDIT');
+            Route::post('/queue/{queueEntry}/start-servicing', [ServicingController::class, 'startFromQueue'])
+                ->middleware('permission:queue,EDIT');
+
+            Route::get('/servicing/bootstrap', [ServicingController::class, 'bootstrap'])
+                ->middleware('permission:servicing,VIEW');
+            Route::get('/servicing', [ServicingController::class, 'index'])
+                ->middleware('permission:servicing,VIEW');
+            Route::get('/servicing/{visit}', [ServicingController::class, 'show'])
+                ->middleware('permission:servicing,VIEW');
+            Route::post('/servicing/{visit}/services', [ServicingController::class, 'addService'])
+                ->middleware('permission:servicing,EDIT');
+            Route::post('/visit-services/{visitServiceLine}/start', [ServicingController::class, 'startService'])
+                ->middleware('permission:servicing,EDIT');
+            Route::patch('/visit-services/{visitServiceLine}/staff', [ServicingController::class, 'assignStaff'])
+                ->middleware('permission:servicing,EDIT');
+            Route::post('/visit-services/{visitServiceLine}/complete', [ServicingController::class, 'completeService'])
+                ->middleware('permission:servicing,COMPLETE');
+            Route::post('/visit-services/{visitServiceLine}/cancel', [ServicingController::class, 'cancelService'])
+                ->middleware('permission:servicing,EDIT');
+            Route::post('/servicing/{visit}/complete', [ServicingController::class, 'completeVisit'])
+                ->middleware('permission:servicing,COMPLETE');
         });
 
         Route::prefix('admin')->group(function () {

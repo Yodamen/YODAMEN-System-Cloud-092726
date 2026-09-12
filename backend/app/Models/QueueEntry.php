@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class QueueEntry extends Model
 {
@@ -36,6 +37,7 @@ class QueueEntry extends Model
     public function cancelledBy(): BelongsTo { return $this->belongsTo(User::class, 'cancelled_by'); }
     public function serviceLines(): HasMany { return $this->hasMany(QueueServiceLine::class)->orderBy('sort_order')->orderBy('id'); }
     public function retailLines(): HasMany { return $this->hasMany(QueueRetailLine::class)->orderBy('sort_order')->orderBy('id'); }
+    public function visit(): HasOne { return $this->hasOne(Visit::class); }
 
     public function isWaiting(): bool
     {

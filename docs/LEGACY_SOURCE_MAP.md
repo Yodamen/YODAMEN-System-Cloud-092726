@@ -32,3 +32,20 @@ Historical V-number aliases and repair scripts are implementation evidence. The 
 | `ProfitSharing.js` | Profit Sharing lifecycle | ProfitSharing domain | PLANNED |
 | Diagnostics/repair scripts | debugging and dirty-data evidence | tests/import validators | do not port runtime |
 | `DevelopmentReset.js` | development cascade reset | factories/dev Artisan command | production route prohibited |
+
+
+## Phase 2C mappings
+
+| Legacy Apps Script / Sheet | Target |
+|---|---|
+| `DB_Visits` / `QueueVisitSetup.js` | `visits`, `Visit` model |
+| `DB_VisitServices` / `BookingVisits.js` | `visit_service_lines`, `VisitServiceLine`, `VisitService` |
+| `DB_VisitRetailItems` | `visit_retail_lines`, `VisitRetailLine` |
+| `startVisitAdmin` | `POST /api/v1/operations/queue/{queueEntry}/start-servicing` |
+| `startVisitServiceAdmin` | `POST /api/v1/operations/visit-services/{line}/start` |
+| `assignVisitServiceStaffAdmin` | `PATCH /api/v1/operations/visit-services/{line}/staff` |
+| `completeVisitServiceAdmin` | `POST /api/v1/operations/visit-services/{line}/complete` |
+| `cancelVisitServiceAdmin` | `POST /api/v1/operations/visit-services/{line}/cancel` |
+| `addVisitServiceAdmin` NEW_SERVICE branch | `POST /api/v1/operations/servicing/{visit}/services` |
+| operational completion downstream hook | `service_completion_events` |
+| `getServicingAdmin` / Servicing UI | `GET /api/v1/operations/servicing`, `ServicingPage.jsx` |

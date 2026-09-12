@@ -71,7 +71,7 @@ class FoundationSeeder extends Seeder
 
         $legacyViewSets = [
             'ROLE-MGR' => [
-                'dashboard', 'customers', 'bookings', 'queue', 'visits', 'fulfillment',
+                'dashboard', 'customers', 'bookings', 'queue', 'visits', 'fulfillment', 'servicing',
                 'sales', 'packages', 'service-balances', 'payments', 'employees', 'attendance',
                 'daily-compensation', 'commissions', 'payroll', 'payslips', 'ar', 'collections',
                 'expenses', 'petty-cash', 'bank-reconciliation', 'cash-management', 'daily-closing',
@@ -81,11 +81,11 @@ class FoundationSeeder extends Seeder
                 'report-services', 'report-staff', 'report-hr', 'report-accounting', 'report-inventory',
             ],
             'ROLE-REC' => [
-                'dashboard', 'customers', 'bookings', 'queue', 'visits', 'fulfillment',
+                'dashboard', 'customers', 'bookings', 'queue', 'visits', 'fulfillment', 'servicing',
                 'sales', 'packages', 'service-balances', 'payments',
             ],
             'ROLE-BAR' => [
-                'dashboard', 'queue', 'fulfillment', 'attendance', 'commissions', 'payslips',
+                'dashboard', 'queue', 'fulfillment', 'servicing', 'attendance', 'commissions', 'payslips',
             ],
         ];
 

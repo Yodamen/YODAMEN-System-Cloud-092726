@@ -29,37 +29,39 @@ class CustomerService
         }
 
         return DB::transaction(function () use ($actor, $data, $customer) {
-            $mobileNormalized = $this->normalizeMobile($data['mobile_number']);
-            if ($mobileNormalized === '') {
-                throw new DomainException('Mobile Number is required.');
+            $mobileNumber = $this->nullableTrim($data['mobile_number'] ?? null);
+            $mobileNormalized = $mobileNumber ? $this->normalizeMobile($mobileNumber) : null;
+
+            if ($mobileNormalized) {
+                $mobileDuplicate = Customer::query()
+                    ->where('business_id', $actor->business_id)
+                    ->where('mobile_normalized', $mobileNormalized)
+                    ->when($customer, fn ($query) => $query->whereKeyNot($customer->id))
+                    ->exists();
+
+                if ($mobileDuplicate) {
+                    throw new DomainException('Possible duplicate customer: this mobile number is already registered to another customer.');
+                }
             }
 
-            $mobileDuplicate = Customer::query()
-                ->where('business_id', $actor->business_id)
-                ->where('mobile_normalized', $mobileNormalized)
-                ->when($customer, fn ($query) => $query->whereKeyNot($customer->id))
-                ->exists();
+            $birthday = $data['birthday'] ?? null;
+            if ($birthday) {
+                $firstNameNormalized = $this->normalizeName($data['first_name']);
+                $lastNameNormalized = $this->normalizeName($data['last_name']);
 
-            if ($mobileDuplicate) {
-                throw new DomainException('Possible duplicate customer: this mobile number is already registered to another customer.');
-            }
+                $identityDuplicate = Customer::query()
+                    ->where('business_id', $actor->business_id)
+                    ->whereDate('birthday', $birthday)
+                    ->when($customer, fn ($query) => $query->whereKeyNot($customer->id))
+                    ->get(['id', 'first_name', 'last_name'])
+                    ->contains(function (Customer $candidate) use ($firstNameNormalized, $lastNameNormalized) {
+                        return $this->normalizeName($candidate->first_name) === $firstNameNormalized
+                            && $this->normalizeName($candidate->last_name) === $lastNameNormalized;
+                    });
 
-            $firstNameNormalized = $this->normalizeName($data['first_name']);
-            $lastNameNormalized = $this->normalizeName($data['last_name']);
-            $birthday = (string) $data['birthday'];
-
-            $identityDuplicate = Customer::query()
-                ->where('business_id', $actor->business_id)
-                ->whereDate('birthday', $birthday)
-                ->when($customer, fn ($query) => $query->whereKeyNot($customer->id))
-                ->get(['id', 'first_name', 'last_name'])
-                ->contains(function (Customer $candidate) use ($firstNameNormalized, $lastNameNormalized) {
-                    return $this->normalizeName($candidate->first_name) === $firstNameNormalized
-                        && $this->normalizeName($candidate->last_name) === $lastNameNormalized;
-                });
-
-            if ($identityDuplicate) {
-                throw new DomainException('Possible duplicate customer: the same name and birthday are already registered.');
+                if ($identityDuplicate) {
+                    throw new DomainException('Possible duplicate customer: the same name and birthday are already registered.');
+                }
             }
 
             $genderId = null;
@@ -78,10 +80,13 @@ class CustomerService
 
             $before = $customer ? $this->snapshot($customer->load(['gender', 'leadSource'])) : null;
             $isNew = ! $customer;
+            $registrationDate = $data['registration_date']
+                ?? $customer?->registration_date?->format('Y-m-d')
+                ?? $this->clock->today();
 
             if (! $customer) {
-                $registrationDate = \Carbon\CarbonImmutable::parse($data['registration_date'], $this->clock->timezone());
-                $prefix = 'CUS-'.$registrationDate->format('my').'-';
+                $dateForCode = \Carbon\CarbonImmutable::parse($registrationDate, $this->clock->timezone());
+                $prefix = 'CUS-'.$dateForCode->format('my').'-';
                 $customer = new Customer([
                     'business_id' => $actor->business_id,
                     'code' => $this->codes->next('CUSTOMER', $prefix, 6, $actor->business_id),
@@ -93,14 +98,14 @@ class CustomerService
             $customer->fill([
                 'first_name' => trim($data['first_name']),
                 'last_name' => trim($data['last_name']),
-                'mobile_number' => trim($data['mobile_number']),
+                'mobile_number' => $mobileNumber,
                 'mobile_normalized' => $mobileNormalized,
                 'email' => $this->nullableTrim($data['email'] ?? null),
-                'birthday' => $data['birthday'],
+                'birthday' => $birthday,
                 'gender_reference_id' => $genderId,
                 'address' => $this->nullableTrim($data['address'] ?? null),
                 'lead_source_reference_id' => $leadSourceId,
-                'registration_date' => $data['registration_date'],
+                'registration_date' => $registrationDate,
                 'notes' => $this->nullableTrim($data['notes'] ?? null),
                 'updated_by' => $actor->id,
             ]);
@@ -176,7 +181,6 @@ class CustomerService
             'notes' => $customer->notes,
         ];
     }
-
 
     public function normalizeName(string $value): string
     {

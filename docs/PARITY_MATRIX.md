@@ -26,7 +26,7 @@ Legend: `DONE` target behavior implemented; `VALIDATE` implemented but pending u
 | Customers | `Customer.js` | DONE | DONE | DONE | Customer tests | DONE |
 | Booking | `BookingVisits.js` | DONE | DONE | DONE | Booking tests | DONE |
 | Queue | `BookingVisits.js` + `QueueVisitSetup.js` | VALIDATE | VALIDATE | VALIDATE | Queue tests | VALIDATE |
-| Visit / Servicing | BookingVisits + UI | PLANNED | PLANNED | PLANNED | waterfall | PLANNED |
+| Visit / Servicing | `BookingVisits.js`, `QueueVisitSetup.js`, Servicing UI | VALIDATE | VALIDATE | VALIDATE | ServicingTest | VALIDATE |
 | Sales creation | `Sales.js` | PLANNED | PLANNED | PLANNED | race/idempotency | PLANNED |
 | Payment ledger | `Sales.js` | PLANNED | PLANNED | PLANNED | waterfall | PLANNED |
 | Payment allocation | `ServicingPaymentAllocation.js` | PLANNED | PLANNED | PLANNED | allocation | PLANNED |
@@ -70,3 +70,46 @@ Legend: `DONE` target behavior implemented; `VALIDATE` implemented but pending u
 | Queue cancellation | append/history-preserving state | Cancel modal | QueueTest | Implemented |
 | Reception Walk-In permission | syncWithoutDetaching Queue CREATE + Booking CREATE | permission-aware button | QueueTest | Implemented |
 | Visit / Start Servicing | Deferred to Phase 2C | No active action | Pending | Correctly deferred |
+
+
+## Phase 2C additions
+| Legacy area | Laravel/MySQL | React | Tests | Status |
+|---|---|---|---|---|
+| Queue → Start Servicing | one Visit per Queue entry, transactional | Start Servicing action | ServicingTest | Implemented, awaiting local acceptance |
+| Visit header | `visits` | Servicing workspace | ServicingTest | Implemented |
+| Visit service lines | `visit_service_lines` with staff snapshots | line-level controls | ServicingTest | Implemented |
+| Visit retail snapshot | `visit_retail_lines` | read-only servicing summary | ServicingTest | Implemented |
+| Multi-service / multi-staff | independent service lines | independent staff selectors | ServicingTest | Implemented |
+| Service completion event | append-only `service_completion_events` | event ID displayed after completion | ServicingTest | Implemented |
+| Service cancellation | reason-required line history | Cancel Service modal | ServicingTest | Implemented |
+| Mixed completed/cancelled outcome | Visit completes when ≥1 line completed and no active lines remain | preserved line states | ServicingTest | Implemented |
+| All services cancelled | Visit/Booking/Queue cancelled | status projection | ServicingTest | Implemented |
+| Add service during Visit | NEW_SERVICE only, Queue snapshot unchanged | Add Service modal | ServicingTest | Implemented |
+| Service Credit completion | intentionally deferred | blocked | Pending | Correctly deferred |
+| Financial finalization | intentionally separate | no checkout controls | Pending Sales phases | Correctly deferred |
+
+## Phase 2C parity / UI correction 01
+| Review item | Target behavior | Status |
+|---|---|---|
+| Booking history tabs | Active / Completed / Cancelled | Implemented, awaiting local acceptance |
+| Queue navigation | Live WAITING queue only; no tabs/status/date filters; refresh beside title | Implemented, awaiting local acceptance |
+| Servicing navigation | Live IN_SERVICE visits only; no tabs/status/date filters; refresh beside title | Implemented, awaiting local acceptance |
+| Customer required fields | First Name + Last Name only | Implemented, awaiting local acceptance |
+| Customer duplicate checks | Mobile OR Name + Birthday when supplied | Implemented, awaiting local acceptance |
+| Customer registration date display | `Mmm. #, ####` | Implemented, awaiting local acceptance |
+| Table actions | Compact dropdown | Implemented across current table modules |
+| Global header | Remove repeated Business Name / Business Date | Implemented |
+| Module title area | Module name only | Implemented across current active pages |
+| Personnel OT layout | Full-width OT section adjacent to eligibility sections | Implemented |
+| Service pricing | Price action inside Edit + historical price log | Implemented |
+| UI density | Uniform compact typography/components | Implemented |
+
+## Phase 2C Parity Correction 03
+
+| Area | Apps Script behavior | React/Laravel status |
+|---|---|---|
+| Booking tabs | Active / Completed / Cancelled pill tabs | Matched |
+| Booking filters | From / To / Search panel | Matched |
+| Booking services display | Actual service names | Matched, vertically stacked |
+| Queue services display | Actual service names | Matched, vertically stacked |
+| Servicing services display | Services column with actual service names | Matched with compact overview + Manage workflow |

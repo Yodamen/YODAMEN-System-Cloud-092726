@@ -14,10 +14,10 @@ return new class extends Migration
             $table->string('code', 50)->unique();
             $table->string('first_name', 100);
             $table->string('last_name', 100);
-            $table->string('mobile_number', 50);
-            $table->string('mobile_normalized', 30);
+            $table->string('mobile_number', 50)->nullable();
+            $table->string('mobile_normalized', 30)->nullable();
             $table->string('email')->nullable();
-            $table->date('birthday');
+            $table->date('birthday')->nullable();
             $table->foreignId('gender_reference_id')->nullable()->constrained('reference_values')->cascadeOnUpdate()->restrictOnDelete();
             $table->text('address')->nullable();
             $table->foreignId('lead_source_reference_id')->nullable()->constrained('reference_values')->cascadeOnUpdate()->restrictOnDelete();

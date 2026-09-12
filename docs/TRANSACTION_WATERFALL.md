@@ -8,6 +8,23 @@ This document fixes the event boundaries that later migration phases must preser
 
 Operational completion can also produce customer-history and future inventory-consumption effects. Commission waits for Sale finalization.
 
+
+## Phase 2C operational completion boundary
+
+`Queue WAITING -> Start Servicing -> Visit IN_SERVICE -> Visit Service COMPLETED/CANCELLED -> Visit operational outcome`
+
+Rules:
+
+- Start Servicing creates exactly one Visit from the Queue entry.
+- Initial Queue service lines are snapshotted into Visit service lines.
+- Each Visit service has an independent staff assignment and status.
+- Each completed service creates exactly one append-only `service_completion_events` record.
+- If another active service remains, the Visit stays `IN_SERVICE`.
+- If all lines are cancelled, Visit + Booking + Queue become `CANCELLED`.
+- If at least one line is completed and no active lines remain, Visit + Booking + Queue become `COMPLETED`.
+- The completion event is an operational source for later Customer History, Inventory Consumption, Sale drafting, and Commission eligibility checks.
+- No Payment, Sale finalization, revenue, AR, or Commission is created by Phase 2C service completion itself.
+
 ## Advance payment
 
 `BookingCreated -> AdvancePaymentReceived`

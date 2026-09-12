@@ -62,4 +62,9 @@ class Customer extends Model
     {
         return trim($this->first_name.' '.$this->last_name);
     }
+
+    public function visits(): HasMany
+    {
+        return $this->hasMany(Visit::class)->orderByDesc('visit_date')->orderByDesc('id');
+    }
 }

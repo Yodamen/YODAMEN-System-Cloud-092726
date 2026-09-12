@@ -11,7 +11,7 @@ export const navigationSections = [
       { label: 'Customers', path: '/operations/customers', module: 'customers', enabled: true },
       { label: 'Bookings', path: '/operations/bookings', module: 'bookings', enabled: true },
       { label: 'Queuing', path: '/operations/queue', module: 'queue', enabled: true },
-      { label: 'Servicing', module: 'servicing' },
+      { label: 'Servicing', path: '/operations/servicing', module: 'servicing', enabled: true },
       { label: 'Service Balances', module: 'service-balances' },
     ],
   },

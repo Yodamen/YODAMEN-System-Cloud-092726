@@ -112,7 +112,7 @@ class QueueService
     {
         $status = strtoupper(trim($status));
         $query = QueueEntry::query()
-            ->with(['customer', 'booking', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines'])
+            ->with(['customer', 'booking', 'branch', 'visit', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines'])
             ->where('business_id', $actor->business_id)
             ->whereDate('queue_date', $date);
 
@@ -215,7 +215,7 @@ class QueueService
 
     private function loadEntry(QueueEntry $queue): QueueEntry
     {
-        return $queue->load(['customer', 'booking', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines']);
+        return $queue->load(['customer', 'booking', 'branch', 'visit', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines']);
     }
 
     private function applyLegacyPriority(Collection $rows): Collection

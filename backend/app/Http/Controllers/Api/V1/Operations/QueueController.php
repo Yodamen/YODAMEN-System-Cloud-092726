@@ -41,7 +41,7 @@ class QueueController extends Controller
             'phase_notes' => [
                 'advance_payment' => 'Advance payment is intentionally deferred until the immutable Payments ledger is active.',
                 'service_credit' => 'Service Credit claims activate with Package Enrollment and Service Credit tables.',
-                'servicing' => 'Starting a Visit from Queuing activates in the next Operations package.',
+                'servicing' => 'Start Servicing now creates one Visit from the waiting Queue entry. Financial finalization remains separate.',
             ],
         ]);
     }
@@ -50,7 +50,7 @@ class QueueController extends Controller
     {
         $date = (string) $request->query('date', $this->clock->today());
         $status = strtoupper((string) $request->query('status', 'WAITING'));
-        if (! in_array($status, ['WAITING', 'CANCELLED', 'ALL'], true)) $status = 'WAITING';
+        if (! in_array($status, ['WAITING', 'SERVICING', 'COMPLETED', 'CANCELLED', 'ALL'], true)) $status = 'WAITING';
 
         $rows = $this->queue->entriesForDate($request->user(), $date, $status);
         return response()->json(['queue' => $rows->map(fn (QueueEntry $row) => $this->resource($row))->values()]);
@@ -59,7 +59,7 @@ class QueueController extends Controller
     public function show(Request $request, QueueEntry $queueEntry): JsonResponse
     {
         $this->assertOwned($request, $queueEntry);
-        $queueEntry->load(['customer', 'booking', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines']);
+        $queueEntry->load(['customer', 'booking', 'branch', 'visit', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines']);
         return response()->json(['queue_entry' => $this->resource($queueEntry)]);
     }
 
@@ -111,6 +111,7 @@ class QueueController extends Controller
             'customer_type' => $row->customer_type, 'queue_date' => $row->queue_date?->format('Y-m-d'),
             'check_in_at' => $row->check_in_at?->toIso8601String(), 'check_in_time' => $row->check_in_at?->format('H:i'),
             'source' => $row->source, 'status' => $row->status,
+            'visit' => $row->visit ? ['id' => $row->visit->id, 'code' => $row->visit->code, 'status' => $row->visit->status] : null,
             'scheduled_date' => $row->scheduled_date?->format('Y-m-d'), 'scheduled_time' => $row->scheduled_time ? substr((string) $row->scheduled_time, 0, 5) : null,
             'notes' => $row->notes, 'cancellation_reason' => $row->cancellation_reason,
             'services' => $row->serviceLines->map(fn ($line) => [
@@ -124,6 +125,7 @@ class QueueController extends Controller
                 'quantity' => $line->quantity, 'unit_price' => (float) $line->unit_price_snapshot, 'notes' => $line->notes,
             ])->values(),
             'can_cancel' => $row->isWaiting(),
+            'can_start_servicing' => $row->isWaiting() && ! $row->visit,
         ];
     }
 

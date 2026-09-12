@@ -122,3 +122,38 @@ it('does not allow walk in creation before queue phase', function () {
         'retail_items' => [],
     ])->assertStatus(422);
 });
+
+it('supports completed booking history as a separate view', function () {
+    $fx = bookingFixture();
+
+    Booking::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'branch_id' => $fx['user']->default_branch_id,
+        'code' => 'BKG-0926-000901',
+        'customer_id' => $fx['customer']->id,
+        'customer_type' => 'NEW',
+        'booking_date' => '2026-09-15',
+        'booking_time' => '10:30:00',
+        'booking_source' => 'RESERVATION',
+        'status' => 'COMPLETED',
+    ]);
+
+    Booking::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'branch_id' => $fx['user']->default_branch_id,
+        'code' => 'BKG-0926-000902',
+        'customer_id' => $fx['customer']->id,
+        'customer_type' => 'NEW',
+        'booking_date' => '2026-09-16',
+        'booking_time' => '11:00:00',
+        'booking_source' => 'RESERVATION',
+        'status' => 'BOOKED',
+    ]);
+
+    $response = $this->actingAs($fx['user'])->getJson('/api/v1/operations/bookings?view=COMPLETED');
+
+    $response->assertOk()
+        ->assertJsonCount(1, 'bookings')
+        ->assertJsonPath('bookings.0.code', 'BKG-0926-000901')
+        ->assertJsonPath('bookings.0.status', 'COMPLETED');
+});

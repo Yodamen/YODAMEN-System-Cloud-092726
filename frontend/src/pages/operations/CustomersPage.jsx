@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, getApiErrorMessage } from '../../api/client'
+import ActionMenu from '../../components/common/ActionMenu'
 import Modal from '../../components/common/Modal'
 import { useAuth } from '../../context/AuthContext'
+import { formatDisplayDate } from '../../utils/formatters'
 
 const emptyForm = {
   id: null,
@@ -79,6 +81,7 @@ export default function CustomersPage() {
     setSaving(true)
     setMessage('')
     setFormError('')
+
     try {
       const payload = { ...form }
       delete payload.id
@@ -106,11 +109,7 @@ export default function CustomersPage() {
   return (
     <div className="page-stack">
       <section className="page-heading">
-        <div>
-          <span className="eyebrow gold">Operations</span>
-          <h1>Customers</h1>
-          <p>Customer masterlist and contact profile. Visit and lifetime-value metrics activate after the Visit and Payment ledgers are migrated.</p>
-        </div>
+        <h1>Customers</h1>
         {hasPermission('customers', 'CREATE') && <button className="primary-button" type="button" onClick={openCreate}>+ Add Customer</button>}
       </section>
 
@@ -127,26 +126,31 @@ export default function CustomersPage() {
           <label className="form-field grow-field">Search<input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, mobile or customer ID" /></label>
           <label className="form-field compact-field">Status<select value={status} onChange={(e) => setStatus(e.target.value)}><option value="ALL">All</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select></label>
         </div>
+
         {loading ? <div className="empty-state">Loading customers...</div> : (
           <div className="table-wrap">
             <table className="data-table">
               <thead><tr><th>Customer</th><th>Mobile</th><th>Registration</th><th>Lead Source</th><th>Status</th><th>Visits</th><th className="money-cell">Lifetime Value</th><th className="actions-column">Action</th></tr></thead>
               <tbody>
-                {customers.map((customer) => (
-                  <tr key={customer.id}>
-                    <td><strong>{customer.full_name}</strong><span className="table-subline">{customer.code}</span></td>
-                    <td>{customer.mobile_number}</td>
-                    <td>{customer.registration_date}</td>
-                    <td>{customer.lead_source || '—'}</td>
-                    <td><span className={`status-pill ${customer.status === 'ACTIVE' ? 'success' : 'neutral'}`}>{customer.status}</span></td>
-                    <td>{customer.metrics_pending ? 'Pending migration' : customer.total_completed_visits}</td>
-                    <td className="money-cell">{customer.metrics_pending ? 'Pending migration' : `₱${Number(customer.lifetime_value || 0).toLocaleString()}`}</td>
-                    <td className="row-actions">
-                      {hasPermission('customers', 'EDIT') && <button className="link-button" type="button" onClick={() => openEdit(customer)}>Edit</button>}
-                      {hasPermission('customers', 'TOGGLE') && <button className="link-button" type="button" onClick={() => toggle(customer)}>{customer.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}</button>}
-                    </td>
-                  </tr>
-                ))}
+                {customers.map((customer) => {
+                  const actions = [
+                    hasPermission('customers', 'EDIT') ? { label: 'Edit', onClick: () => openEdit(customer) } : null,
+                    hasPermission('customers', 'TOGGLE') ? { label: customer.status === 'ACTIVE' ? 'Deactivate' : 'Activate', danger: customer.status === 'ACTIVE', onClick: () => toggle(customer) } : null,
+                  ]
+
+                  return (
+                    <tr key={customer.id}>
+                      <td><strong>{customer.full_name}</strong><span className="table-subline">{customer.code}</span></td>
+                      <td>{customer.mobile_number || '—'}</td>
+                      <td>{formatDisplayDate(customer.registration_date)}</td>
+                      <td>{customer.lead_source || '—'}</td>
+                      <td><span className={`status-pill ${customer.status === 'ACTIVE' ? 'success' : 'neutral'}`}>{customer.status}</span></td>
+                      <td>{customer.metrics_pending ? 'Pending migration' : customer.total_completed_visits}</td>
+                      <td className="money-cell">{customer.metrics_pending ? 'Pending migration' : `₱${Number(customer.lifetime_value || 0).toLocaleString()}`}</td>
+                      <td className="action-cell"><ActionMenu items={actions} /></td>
+                    </tr>
+                  )
+                })}
                 {!customers.length && <tr><td colSpan="8"><div className="empty-state">No customers found.</div></td></tr>}
               </tbody>
             </table>
@@ -155,19 +159,20 @@ export default function CustomersPage() {
       </section>
 
       {form && (
-        <Modal title={form.id ? 'Edit Customer' : 'Add Customer'} subtitle="Duplicate control checks both mobile number and customer name + birthday." onClose={() => setForm(null)} wide>
+        <Modal title={form.id ? 'Edit Customer' : 'Add Customer'} onClose={() => setForm(null)} wide>
           {formError ? <div className="form-alert error">{formError}</div> : null}
           <form className="form-grid" onSubmit={save}>
             <label className="form-field">First Name<input value={form.first_name} onChange={(e) => setForm((v) => ({ ...v, first_name: e.target.value }))} required /></label>
             <label className="form-field">Last Name<input value={form.last_name} onChange={(e) => setForm((v) => ({ ...v, last_name: e.target.value }))} required /></label>
-            <label className="form-field">Mobile Number<input value={form.mobile_number} onChange={(e) => setForm((v) => ({ ...v, mobile_number: e.target.value }))} required /></label>
+            <label className="form-field">Mobile Number<input value={form.mobile_number} onChange={(e) => setForm((v) => ({ ...v, mobile_number: e.target.value }))} /></label>
             <label className="form-field">Email<input type="email" value={form.email} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} /></label>
-            <label className="form-field">Birthday<input type="date" value={form.birthday} onChange={(e) => setForm((v) => ({ ...v, birthday: e.target.value }))} required /></label>
+            <label className="form-field">Birthday<input type="date" value={form.birthday} onChange={(e) => setForm((v) => ({ ...v, birthday: e.target.value }))} /></label>
             <label className="form-field">Gender<select value={form.gender_code} onChange={(e) => setForm((v) => ({ ...v, gender_code: e.target.value }))}><option value="">Select</option>{references.genders.map((row) => <option key={row.code} value={row.code}>{row.value}</option>)}</select></label>
             <label className="form-field">Lead Source<select value={form.lead_source_code} onChange={(e) => setForm((v) => ({ ...v, lead_source_code: e.target.value }))}><option value="">Select</option>{references.lead_sources.map((row) => <option key={row.code} value={row.code}>{row.value}</option>)}</select></label>
-            <label className="form-field">Registration Date<input type="date" value={form.registration_date} onChange={(e) => setForm((v) => ({ ...v, registration_date: e.target.value }))} required /></label>
+            <label className="form-field">Registration Date<input type="date" value={form.registration_date} onChange={(e) => setForm((v) => ({ ...v, registration_date: e.target.value }))} /></label>
             <label className="form-field form-span-2">Address<textarea rows="2" value={form.address} onChange={(e) => setForm((v) => ({ ...v, address: e.target.value }))} /></label>
             <label className="form-field form-span-2">Notes<textarea rows="3" value={form.notes} onChange={(e) => setForm((v) => ({ ...v, notes: e.target.value }))} /></label>
+            <div className="field-helper form-span-2">Duplicate control applies when a mobile number is provided, or when both name and birthday match an existing customer.</div>
             <div className="modal-actions form-span-2"><button className="secondary-button" type="button" onClick={() => setForm(null)}>Cancel</button><button className="primary-button" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Customer'}</button></div>
           </form>
         </Modal>

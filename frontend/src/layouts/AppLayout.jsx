@@ -5,7 +5,7 @@ import AccessCodeResetModal from '../features/auth/AccessCodeResetModal'
 import { useAuth } from '../context/AuthContext'
 
 export default function AppLayout() {
-  const { user, bootstrap, logout } = useAuth()
+  const { user, logout } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
 
@@ -24,13 +24,7 @@ export default function AppLayout() {
 
       <div className="app-main">
         <header className="topbar">
-          <div>
-            <div className="topbar-business">{bootstrap?.business?.name || 'YODAMEN Grooming Lounge'}</div>
-            <div className="topbar-meta">
-              {bootstrap?.system?.business_date ? `Business Date: ${bootstrap.system.business_date}` : 'Foundation environment'}
-            </div>
-          </div>
-
+          <div className="topbar-spacer" />
           <div className="user-menu">
             <div className="user-meta">
               <strong>{user?.display_name}</strong>

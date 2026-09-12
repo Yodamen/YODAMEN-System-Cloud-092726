@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, getApiErrorMessage } from '../../api/client'
+import ActionMenu from '../../components/common/ActionMenu'
 import Modal from '../../components/common/Modal'
 import { useAuth } from '../../context/AuthContext'
 
@@ -125,11 +126,7 @@ export default function ReferenceListsPage() {
   return (
     <div className="page-stack">
       <section className="page-heading">
-        <div>
-          <span className="eyebrow gold">Administration</span>
-          <h1>Reference Lists</h1>
-          <p>Maintain stable dropdown options used by YODAMEN modules. System codes remain fixed while labels may be updated.</p>
-        </div>
+        <h1>Reference Lists</h1>
         {hasPermission('references', 'CREATE') && (
           <button className="primary-button" type="button" onClick={openCreate} disabled={!selectedGroup}>
             + Add Option
@@ -182,16 +179,10 @@ export default function ReferenceListsPage() {
                       </span>
                     </td>
                     <td>{record.is_system ? 'System' : 'Custom'}</td>
-                    <td className="row-actions">
-                      {hasPermission('references', 'EDIT') && (
-                        <button className="link-button" type="button" onClick={() => openEdit(record)}>Edit</button>
-                      )}
-                      {hasPermission('references', 'TOGGLE') && (
-                        <button className="link-button" type="button" onClick={() => toggle(record)}>
-                          {record.active ? 'Deactivate' : 'Activate'}
-                        </button>
-                      )}
-                    </td>
+                    <td className="action-cell"><ActionMenu items={[
+                      hasPermission('references', 'EDIT') ? { label: 'Edit', onClick: () => openEdit(record) } : null,
+                      hasPermission('references', 'TOGGLE') ? { label: record.active ? 'Deactivate' : 'Activate', danger: record.active, onClick: () => toggle(record) } : null,
+                    ]} /></td>
                   </tr>
                 ))}
                 {!references.length && (

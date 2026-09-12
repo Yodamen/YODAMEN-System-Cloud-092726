@@ -1,6 +1,6 @@
 # YODAMEN Migration Status
 
-**Current phase:** Phase 2B, Queue + Walk-In + Check-In Foundation  
+**Current phase:** Phase 2C, Visit + Servicing Foundation  
 **Blueprint:** Approved September 11, 2026  
 **Target:** React + Vite / Laravel / MySQL (`yodamen_dev`)
 
@@ -113,3 +113,40 @@ Status: **ACCEPTED / WORKING BASELINE**
 Status: **IMPLEMENTED PACKAGE, awaiting local migration/tests/UI acceptance.**
 
 Includes normalized Queue tables, reservation check-in, atomic Walk-In → Booking → Queue creation, legacy waiting-priority behavior, queue cancellation with preserved history, Reception Walk-In permissions, and React Queuing UI. Visit/Servicing and financial workflows remain deferred.
+
+
+## Phase 2B acceptance
+Status: **ACCEPTED / WORKING BASELINE**
+
+- Queue/Walk-In browser flow validated.
+- Approved Git checkpoint: `8b8d3c1`.
+- `development` and `stable/approved` aligned before Phase 2C.
+
+## Phase 2C - Visit + Servicing Foundation
+Status: **IMPLEMENTED PACKAGE, awaiting local migration/tests/UI acceptance.**
+
+Includes Queue → Start Servicing, one Visit per Queue entry, Visit service/retail snapshots, separate multi-staff service lines, active staff reassignment, add NEW_SERVICE during an active Visit, line-level completion/cancellation, mixed Visit outcomes, append-only service completion events, and the React Servicing workspace.
+
+Financial boundaries remain enforced: service completion does not create Sales, Payments, Commission, Package settlement, or accounting entries.
+
+## Phase 2C parity / UI correction 01
+Status: **IMPLEMENTED PACKAGE, awaiting local migration/tests/UI acceptance.**
+
+User review surfaced cross-phase parity/UI gaps before Phase 2C approval. Correction 01 adds the missing Bookings Completed tab, removes Queue/Servicing status tabs, makes Customer registration require only first/last name while retaining conditional duplicate controls, moves Personnel OT configuration into a dedicated section, integrates Service price scheduling/history into Edit Service, changes table actions to compact dropdowns, removes repeated business/date and module subheadlines, and applies a system-wide compact UI pass.
+
+`stable/approved` must remain at Phase 2B (`8b8d3c1`) until this correction and Phase 2C are validated together.
+
+## Phase 2C parity / UI correction 02
+Status: **IMPLEMENTED PACKAGE, awaiting local UI acceptance.**
+
+Queuing and Servicing were aligned to the current Apps Script live-workspace layout. Both pages now remove status/date controls and summary cards. Queuing shows the current business-date WAITING queue only, while Servicing shows current business-date IN_SERVICE visits only. A compact refresh control sits beside each page title. Bookings remains the only Operations page with Active / Completed / Cancelled tabs.
+
+No backend schema or business-rule migration is required for this correction.
+
+
+## 2026-09-12 - Phase 2C Parity Correction 03
+
+- Refined Bookings tabs/filter layout to match the approved Apps Script visual structure.
+- Replaced service/item counts with actual vertically stacked service names in Bookings and Queuing.
+- Converted Servicing overview to a compact table with a Services column while retaining service-level management through a Manage modal.
+- Frontend-only. No database migration required.

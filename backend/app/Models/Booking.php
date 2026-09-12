@@ -73,6 +73,11 @@ class Booking extends Model
         return $this->hasOne(QueueEntry::class);
     }
 
+    public function visit(): HasOne
+    {
+        return $this->hasOne(Visit::class);
+    }
+
     public function canCheckIn(): bool
     {
         return strtoupper((string) $this->status) === 'BOOKED'

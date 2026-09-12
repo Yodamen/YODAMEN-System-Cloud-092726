@@ -6,15 +6,8 @@ export default function DashboardPage() {
   return (
     <div className="page-stack">
       <section className="page-heading">
-        <div>
-          <span className="eyebrow gold">Master Data Foundation</span>
-          <h1>Dashboard</h1>
-          <p>
-            YODAMEN now has authenticated foundation controls plus Reference Lists,
-            Services &amp; Pricing, and Personnel master data.
-          </p>
-        </div>
-        <span className="status-pill success">Phase 1B</span>
+        <h1>Dashboard</h1>
+        <span className="status-pill success">Phase 2C</span>
       </section>
 
       <section className="metric-grid">

@@ -101,6 +101,24 @@ it('allows the same name when the birthday and mobile number are different', fun
     expect(Customer::count())->toBe(2);
 });
 
+
+it('allows customer registration with only first and last name', function () {
+    $user = foundationUser();
+
+    $response = $this->actingAs($user)->postJson('/api/v1/operations/customers', [
+        'first_name' => 'Minimal',
+        'last_name' => 'Customer',
+    ]);
+
+    $response->assertCreated()
+        ->assertJsonPath('customer.first_name', 'Minimal')
+        ->assertJsonPath('customer.last_name', 'Customer')
+        ->assertJsonPath('customer.mobile_number', null)
+        ->assertJsonPath('customer.birthday', null);
+
+    expect(Customer::query()->where('first_name', 'Minimal')->where('last_name', 'Customer')->exists())->toBeTrue();
+});
+
 it('toggles customer status without deleting the customer', function () {
     $user = foundationUser();
     $customer = Customer::query()->create([
