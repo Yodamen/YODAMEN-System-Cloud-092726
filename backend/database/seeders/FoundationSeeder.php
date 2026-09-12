@@ -96,7 +96,7 @@ class FoundationSeeder extends Seeder
                 ->pluck('id')
                 ->all();
 
-            $roles[$roleCode]->permissions()->sync($permissionIds);
+            $roles[$roleCode]->permissions()->syncWithoutDetaching($permissionIds);
         }
     }
 

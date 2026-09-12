@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Booking extends Model
 {
@@ -65,6 +66,17 @@ class Booking extends Model
     public function rebookings(): HasMany
     {
         return $this->hasMany(BookingRebooking::class)->orderByDesc('rebooked_at');
+    }
+
+    public function queueEntry(): HasOne
+    {
+        return $this->hasOne(QueueEntry::class);
+    }
+
+    public function canCheckIn(): bool
+    {
+        return strtoupper((string) $this->status) === 'BOOKED'
+            && strtoupper((string) $this->booking_source) === 'RESERVATION';
     }
 
     public function isEditableFromBookings(): bool

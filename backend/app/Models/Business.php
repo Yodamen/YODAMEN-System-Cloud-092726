@@ -58,4 +58,9 @@ class Business extends Model
     {
         return $this->hasMany(Booking::class);
     }
+
+    public function queueEntries(): HasMany
+    {
+        return $this->hasMany(QueueEntry::class);
+    }
 }

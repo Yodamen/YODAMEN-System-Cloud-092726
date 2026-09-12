@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\BootstrapController;
 use App\Http\Controllers\Api\V1\Hr\PersonnelController;
 use App\Http\Controllers\Api\V1\Operations\BookingController;
 use App\Http\Controllers\Api\V1\Operations\CustomerController;
+use App\Http\Controllers\Api\V1\Operations\QueueController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -56,6 +57,20 @@ Route::prefix('v1')->group(function () {
                 ->middleware('permission:bookings,EDIT');
             Route::post('/bookings/{booking}/cancel', [BookingController::class, 'cancel'])
                 ->middleware('permission:bookings,EDIT');
+
+            Route::post('/bookings/{booking}/check-in', [QueueController::class, 'checkIn'])
+                ->middleware(['permission:bookings,EDIT', 'permission:queue,CREATE']);
+
+            Route::get('/queue/bootstrap', [QueueController::class, 'bootstrap'])
+                ->middleware('permission:queue,VIEW');
+            Route::get('/queue', [QueueController::class, 'index'])
+                ->middleware('permission:queue,VIEW');
+            Route::get('/queue/{queueEntry}', [QueueController::class, 'show'])
+                ->middleware('permission:queue,VIEW');
+            Route::post('/queue/walk-ins', [QueueController::class, 'createWalkIn'])
+                ->middleware(['permission:queue,CREATE', 'permission:bookings,CREATE']);
+            Route::post('/queue/{queueEntry}/cancel', [QueueController::class, 'cancel'])
+                ->middleware('permission:queue,EDIT');
         });
 
         Route::prefix('admin')->group(function () {

@@ -1,6 +1,6 @@
 # YODAMEN Migration Status
 
-**Current phase:** Phase 1B, Master Data Foundations  
+**Current phase:** Phase 2B, Queue + Walk-In + Check-In Foundation  
 **Blueprint:** Approved September 11, 2026  
 **Target:** React + Vite / Laravel / MySQL (`yodamen_dev`)
 
@@ -99,3 +99,17 @@ Sales/Payments remain a later phase and will consume completed operational event
 Status: IMPLEMENTED PACKAGE, awaiting local migration/tests/UI acceptance.
 
 Includes customer master, reservation booking header/service/retail lines, rebooking history, booking cancellation, audit and React pages. Walk-In/Queue, advances, Service Credits and downstream Visit/Sales remain deliberately deferred.
+
+
+## Phase 2A acceptance
+Status: **ACCEPTED / WORKING BASELINE**
+
+- 25 backend tests passed after duplicate-customer controls.
+- Customer duplicate controls: normalized mobile OR normalized name + exact birthday.
+- Customer and Booking browser validation completed.
+- Approved Git checkpoint: `b8a1193`.
+
+## Phase 2B - Queue + Walk-In + Check-In Foundation
+Status: **IMPLEMENTED PACKAGE, awaiting local migration/tests/UI acceptance.**
+
+Includes normalized Queue tables, reservation check-in, atomic Walk-In → Booking → Queue creation, legacy waiting-priority behavior, queue cancellation with preserved history, Reception Walk-In permissions, and React Queuing UI. Visit/Servicing and financial workflows remain deferred.

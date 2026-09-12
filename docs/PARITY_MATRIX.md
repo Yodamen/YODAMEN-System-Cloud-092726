@@ -23,9 +23,9 @@ Legend: `DONE` target behavior implemented; `VALIDATE` implemented but pending u
 | Managing Partner | distinct position | server enforced | UI coercion | position ref | partner test | VALIDATE |
 | Hourly/OT profile | HR V2/V10 | server validation | personnel form | personnel fields | OT test | VALIDATE |
 | Profit Sharing profile | HR V10 | server validation | partner section | personnel fields | partner test | VALIDATE |
-| Customers | `Customer.js` | PLANNED | PLANNED | PLANNED | PLANNED | PLANNED |
-| Booking | `BookingVisits.js` | PLANNED | PLANNED | PLANNED | waterfall | PLANNED |
-| Queue | Booking/Queue source | PLANNED | PLANNED | PLANNED | waterfall | PLANNED |
+| Customers | `Customer.js` | DONE | DONE | DONE | Customer tests | DONE |
+| Booking | `BookingVisits.js` | DONE | DONE | DONE | Booking tests | DONE |
+| Queue | `BookingVisits.js` + `QueueVisitSetup.js` | VALIDATE | VALIDATE | VALIDATE | Queue tests | VALIDATE |
 | Visit / Servicing | BookingVisits + UI | PLANNED | PLANNED | PLANNED | waterfall | PLANNED |
 | Sales creation | `Sales.js` | PLANNED | PLANNED | PLANNED | race/idempotency | PLANNED |
 | Payment ledger | `Sales.js` | PLANNED | PLANNED | PLANNED | waterfall | PLANNED |
@@ -57,3 +57,16 @@ Legend: `DONE` target behavior implemented; `VALIDATE` implemented but pending u
 | Walk-In -> Booking -> Queue | Deferred to Phase 2B | Disabled | Pending | Correctly deferred |
 | Advance Payment at Booking | Deferred to Payments ledger phase | Informational only | Pending | Correctly deferred |
 | Service Credit claims | Deferred to Package/Service Credit phase | Not enabled | Pending | Correctly deferred |
+
+
+## Phase 2B additions
+| Legacy area | Laravel/MySQL | React | Tests | Status |
+|---|---|---|---|---|
+| Reservation check-in | QueueService + queue_entries | Booking Check In | QueueTest | Implemented, awaiting local acceptance |
+| Walk-In common lifecycle | BKG + QUE in one transaction | New Walk-In modal | QueueTest | Implemented, no separate Walk-In transaction model |
+| Queue service/staff snapshot | queue_service_lines | Queuing table | QueueTest | Implemented |
+| Queue retail snapshot | queue_retail_lines | Queuing table | Queue workflow | Implemented |
+| Queue priority | Derived legacy algorithm | Priority column | QueueTest | Implemented |
+| Queue cancellation | append/history-preserving state | Cancel modal | QueueTest | Implemented |
+| Reception Walk-In permission | syncWithoutDetaching Queue CREATE + Booking CREATE | permission-aware button | QueueTest | Implemented |
+| Visit / Start Servicing | Deferred to Phase 2C | No active action | Pending | Correctly deferred |

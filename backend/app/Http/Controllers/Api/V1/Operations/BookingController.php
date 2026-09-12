@@ -58,12 +58,12 @@ class BookingController extends Controller
             ],
             'booking_sources' => [
                 ['code' => 'RESERVATION', 'value' => 'Reservation', 'enabled' => true],
-                ['code' => 'WALK_IN', 'value' => 'Walk-in', 'enabled' => false, 'note' => 'Enabled with Queue phase'],
+                ['code' => 'WALK_IN', 'value' => 'Walk-in', 'enabled' => true, 'note' => 'Created from the Queuing page'],
             ],
             'phase_notes' => [
                 'advance_payment' => 'Advance cash receipt will be activated with the Payments ledger. It is intentionally not stored on the Booking record.',
                 'service_credit' => 'Service Credit claims will be activated with Package/Service Credit tables.',
-                'walk_in' => 'Walk-In creation will be activated together with Queue so Booking + Queue are created atomically.',
+                'walk_in' => 'Walk-Ins are created from Queuing and atomically create both Booking and Queue records.',
             ],
         ]);
     }
@@ -72,7 +72,7 @@ class BookingController extends Controller
     {
         $user = $request->user();
         $query = Booking::query()
-            ->with(['customer', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines', 'rebookings'])
+            ->with(['customer', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines', 'rebookings', 'queueEntry'])
             ->where('business_id', $user->business_id);
 
         $view = strtoupper(trim((string) $request->query('view', 'ACTIVE')));
@@ -115,7 +115,7 @@ class BookingController extends Controller
     public function show(Request $request, Booking $booking): JsonResponse
     {
         $this->assertOwned($request, $booking);
-        $booking->load(['customer', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines', 'rebookings.actor']);
+        $booking->load(['customer', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines', 'rebookings.actor', 'queueEntry']);
         return response()->json(['booking' => $this->resource($booking)]);
     }
 
@@ -229,6 +229,12 @@ class BookingController extends Controller
             'cancellation_reason' => $booking->cancellation_reason,
             'cancelled_at' => $booking->cancelled_at?->toIso8601String(),
             'editable' => $booking->isEditableFromBookings(),
+            'can_check_in' => $booking->canCheckIn() && ! $booking->queueEntry,
+            'queue_entry' => $booking->queueEntry ? [
+                'id' => $booking->queueEntry->id,
+                'code' => $booking->queueEntry->code,
+                'status' => $booking->queueEntry->status,
+            ] : null,
             'services' => $booking->serviceLines->map(fn ($line) => [
                 'id' => $line->id,
                 'code' => $line->code,

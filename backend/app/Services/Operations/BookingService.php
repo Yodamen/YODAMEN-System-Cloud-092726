@@ -219,6 +219,92 @@ class BookingService
         });
     }
 
+    public function createWalkIn(User $actor, array $data): Booking
+    {
+        return DB::transaction(function () use ($actor, $data) {
+            $customer = Customer::query()
+                ->where('business_id', $actor->business_id)
+                ->whereKey($data['customer_id'])
+                ->firstOrFail();
+
+            if (strtoupper($customer->status) !== 'ACTIVE') {
+                throw new DomainException('Inactive customers cannot be used for a Walk-In.');
+            }
+
+            if (! $actor->default_branch_id) {
+                throw new DomainException('A default branch is required before creating a Walk-In.');
+            }
+
+            $validatedServices = $this->validateServiceLines($actor, $data['services'] ?? []);
+            $validatedRetail = $this->validateRetailLines($data['retail_items'] ?? []);
+
+            if (! $validatedServices && ! $validatedRetail) {
+                throw new DomainException('Add at least one service or retail purchase.');
+            }
+
+            $now = $this->clock->now();
+            $prefix = 'BKG-'.$now->format('my').'-';
+            $booking = Booking::query()->create([
+                'business_id' => $actor->business_id,
+                'branch_id' => $actor->default_branch_id,
+                'code' => $this->codes->next('BOOKING:'.$now->format('my'), $prefix, 6, $actor->business_id),
+                'customer_id' => $customer->id,
+                'customer_type' => strtoupper($data['customer_type']),
+                'booking_date' => $now->toDateString(),
+                'booking_time' => $now->format('H:i:s'),
+                'booking_source' => 'WALK_IN',
+                'status' => 'CHECKED_IN',
+                'notes' => $this->nullableTrim($data['notes'] ?? null),
+                'created_by' => $actor->id,
+                'updated_by' => $actor->id,
+            ]);
+
+            foreach ($validatedServices as $index => $line) {
+                $booking->serviceLines()->create([
+                    'code' => $booking->code.'-S'.str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT),
+                    'service_id' => $line['service']->id,
+                    'service_name_snapshot' => $line['service']->name,
+                    'source_type' => 'NEW_SERVICE',
+                    'source_reference_code' => null,
+                    'quantity' => $line['quantity'],
+                    'assigned_personnel_id' => $line['personnel']?->id,
+                    'notes' => $line['notes'],
+                    'sort_order' => ($index + 1) * 10,
+                    'created_by' => $actor->id,
+                    'updated_by' => $actor->id,
+                ]);
+            }
+
+            foreach ($validatedRetail as $index => $line) {
+                $booking->retailLines()->create([
+                    'code' => $booking->code.'-R'.str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT),
+                    'legacy_retail_item_code' => null,
+                    'item_name_snapshot' => $line['item_name'],
+                    'quantity' => $line['quantity'],
+                    'unit_price_snapshot' => $line['unit_price'],
+                    'notes' => $line['notes'],
+                    'sort_order' => ($index + 1) * 10,
+                    'created_by' => $actor->id,
+                    'updated_by' => $actor->id,
+                ]);
+            }
+
+            $booking->refresh()->load(['customer', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines', 'rebookings']);
+
+            $this->audit->record(
+                action: 'CREATE_WALK_IN',
+                module: 'bookings',
+                entityType: Booking::class,
+                entityId: $booking->id,
+                after: $this->snapshot($booking),
+                actor: $actor,
+                metadata: ['source' => 'WALK_IN'],
+            );
+
+            return $booking;
+        });
+    }
+
     public function snapshot(Booking $booking): array
     {
         return [
