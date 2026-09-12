@@ -114,7 +114,7 @@ class FoundationSeeder extends Seeder
             'sales' => ['VIEW', 'CREATE', 'EDIT'],
             'packages' => ['VIEW'],
             'service-balances' => ['VIEW'],
-            'payments' => ['VIEW'],
+            'payments' => ['VIEW', 'CREATE'],
             'my-payroll' => ['VIEW'],
             'my-profit' => ['VIEW'],
             'my-attendance' => ['VIEW'],

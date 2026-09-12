@@ -9,6 +9,7 @@ use App\Http\Requests\Api\V1\Operations\SaveBookingRequest;
 use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Personnel;
+use App\Models\ReferenceGroup;
 use App\Models\Service;
 use App\Models\ServicePrice;
 use App\Services\Foundation\BusinessClock;
@@ -60,8 +61,10 @@ class BookingController extends Controller
                 ['code' => 'RESERVATION', 'value' => 'Reservation', 'enabled' => true],
                 ['code' => 'WALK_IN', 'value' => 'Walk-in', 'enabled' => true, 'note' => 'Created from the Queuing page'],
             ],
+            'payment_methods' => $this->paymentMethods($user->business_id),
+            'can_receive_advance' => $user->hasPermission('payments', 'CREATE'),
             'phase_notes' => [
-                'advance_payment' => 'Advance cash receipt will be activated with the Payments ledger. It is intentionally not stored on the Booking record.',
+                'advance_payment' => 'Advance cash is recorded in the immutable Payments ledger and stays linked to the Booking until its Sale is created.',
                 'service_credit' => 'Service Credit claims will be activated with Package/Service Credit tables.',
                 'walk_in' => 'Walk-Ins are created from Queuing and atomically create both Booking and Queue records.',
             ],
@@ -72,7 +75,7 @@ class BookingController extends Controller
     {
         $user = $request->user();
         $query = Booking::query()
-            ->with(['customer', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines', 'rebookings', 'queueEntry'])
+            ->with(['customer', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines', 'rebookings', 'queueEntry', 'payments'])
             ->where('business_id', $user->business_id);
 
         $view = strtoupper(trim((string) $request->query('view', 'ACTIVE')));
@@ -115,7 +118,7 @@ class BookingController extends Controller
     public function show(Request $request, Booking $booking): JsonResponse
     {
         $this->assertOwned($request, $booking);
-        $booking->load(['customer', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines', 'rebookings.actor', 'queueEntry']);
+        $booking->load(['customer', 'branch', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines', 'rebookings.actor', 'queueEntry', 'payments']);
         return response()->json(['booking' => $this->resource($booking)]);
     }
 
@@ -208,6 +211,18 @@ class BookingController extends Controller
             ->all();
     }
 
+
+    private function paymentMethods(int $businessId): array
+    {
+        $group = ReferenceGroup::query()->where('business_id', $businessId)->where('code', 'PAYMENT_METHOD')->first();
+        if (! $group) return [];
+
+        return $group->values()->where('active', true)->orderBy('sort_order')->orderBy('display_value')
+            ->get(['id', 'code', 'display_value'])
+            ->map(fn ($row) => ['id' => $row->id, 'code' => $row->code, 'name' => $row->display_value])
+            ->values()->all();
+    }
+
     private function resource(Booking $booking): array
     {
         return [
@@ -235,6 +250,7 @@ class BookingController extends Controller
                 'code' => $booking->queueEntry->code,
                 'status' => $booking->queueEntry->status,
             ] : null,
+            'advance_payment_total' => round((float) $booking->payments->where('payment_type', 'ADVANCE')->where('status', 'RECEIVED')->sum('amount'), 2),
             'services' => $booking->serviceLines->map(fn ($line) => [
                 'id' => $line->id,
                 'code' => $line->code,

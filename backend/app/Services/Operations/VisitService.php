@@ -12,6 +12,7 @@ use App\Models\VisitServiceLine;
 use App\Services\Foundation\BusinessClock;
 use App\Services\Foundation\CodeSequenceService;
 use App\Services\Security\AuditService;
+use App\Services\Sales\SaleDraftService;
 use DomainException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,7 @@ class VisitService
         private readonly CodeSequenceService $codes,
         private readonly AuditService $audit,
         private readonly BusinessClock $clock,
+        private readonly SaleDraftService $sales,
     ) {
     }
 
@@ -470,13 +472,16 @@ class VisitService
                 $visit->update(['status' => 'COMPLETED', 'check_out_at' => $now, 'updated_by' => $actor->id]);
                 $visit->booking()->update(['status' => 'COMPLETED', 'updated_by' => $actor->id]);
                 $visit->queueEntry()->update(['status' => 'COMPLETED', 'updated_by' => $actor->id]);
+                $sale = $this->sales->ensureForCompletedVisit($actor, $visit->fresh());
                 $this->audit->record(
                     action: 'COMPLETE_VISIT', module: 'servicing', entityType: Visit::class, entityId: $visit->id,
                     after: $this->snapshot($this->loadVisit($visit->fresh())), actor: $actor,
                     metadata: [
                         'completed_service_count' => $completedCount,
                         'cancelled_service_count' => $cancelledCount,
-                        'sale_created' => false,
+                        'sale_created' => true,
+                        'sale_id' => $sale->id,
+                        'sale_code' => $sale->code,
                         'commission_created' => false,
                         'inventory_posted' => false,
                     ],
@@ -536,7 +541,7 @@ class VisitService
     private function relations(): array
     {
         return [
-            'customer', 'booking', 'queueEntry', 'branch',
+            'customer', 'booking.payments', 'queueEntry', 'branch',
             'serviceLines.service', 'serviceLines.assignedPersonnel', 'serviceLines.completionEvent',
             'retailLines',
         ];

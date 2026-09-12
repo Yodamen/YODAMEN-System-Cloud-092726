@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, getApiErrorMessage } from '../../api/client'
 import ActionMenu from '../../components/common/ActionMenu'
 import Modal from '../../components/common/Modal'
+import PageRefreshButton from '../../components/common/PageRefreshButton'
 import { useAuth } from '../../context/AuthContext'
 import { formatDisplayDate } from '../../utils/formatters'
 
@@ -19,12 +20,58 @@ const emptyForm = {
   notes: '',
 }
 
+const months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+function peso(value) {
+  return new Intl.NumberFormat('en-PH', {
+    style: 'currency',
+    currency: 'PHP',
+    minimumFractionDigits: 2,
+  }).format(Number(value || 0))
+}
+
+function daysSince(dateValue) {
+  if (!dateValue) return null
+  const value = new Date(dateValue)
+  if (Number.isNaN(value.getTime())) return null
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const date = new Date(value.getFullYear(), value.getMonth(), value.getDate())
+  return Math.max(0, Math.floor((today - date) / 86400000))
+}
+
+function matchesLastVisit(customer, filter) {
+  if (filter === 'ALL') return true
+  const days = customer.days_since_last_visit ?? daysSince(customer.last_visit)
+  if (filter === 'NEVER') return days == null
+  if (days == null) return false
+  return Number(days) > Number(filter)
+}
+
+function matchesLifetimeValue(value, filter) {
+  const amount = Number(value || 0)
+  if (filter === 'ALL') return true
+  if (filter === '0-999') return amount < 1000
+  if (filter === '1000-4999') return amount >= 1000 && amount < 5000
+  if (filter === '5000-9999') return amount >= 5000 && amount < 10000
+  if (filter === '10000-19999') return amount >= 10000 && amount < 20000
+  if (filter === '20000-49999') return amount >= 20000 && amount < 50000
+  if (filter === '50000+') return amount >= 50000
+  return true
+}
+
 export default function CustomersPage() {
   const { hasPermission } = useAuth()
   const [customers, setCustomers] = useState([])
   const [references, setReferences] = useState({ genders: [], lead_sources: [] })
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('ALL')
+  const [birthMonth, setBirthMonth] = useState('ALL')
+  const [lastVisit, setLastVisit] = useState('ALL')
+  const [lifetimeValue, setLifetimeValue] = useState('ALL')
   const [form, setForm] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -32,25 +79,55 @@ export default function CustomersPage() {
   const [formError, setFormError] = useState('')
 
   const load = useCallback(async () => {
-    const response = await api.get('/v1/operations/customers', {
-      params: { search: search || undefined, status: status === 'ALL' ? undefined : status },
-    })
+    const response = await api.get('/v1/operations/customers')
     setCustomers(response.data.customers || [])
     setReferences(response.data.references || { genders: [], lead_sources: [] })
-  }, [search, status])
+  }, [])
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      load().catch((error) => setMessage(getApiErrorMessage(error, 'Unable to load customers.'))).finally(() => setLoading(false))
-    }, 150)
+      load()
+        .catch((error) => setMessage(getApiErrorMessage(error, 'Unable to load customers.')))
+        .finally(() => setLoading(false))
+    }, 100)
     return () => window.clearTimeout(timer)
   }, [load])
 
-  const summary = useMemo(() => ({
-    total: customers.length,
-    active: customers.filter((row) => row.status === 'ACTIVE').length,
-    inactive: customers.filter((row) => row.status === 'INACTIVE').length,
-  }), [customers])
+  const filteredCustomers = useMemo(() => {
+    const needle = search.trim().toLowerCase()
+    return customers.filter((customer) => {
+      const fullName = String(customer.full_name || `${customer.first_name || ''} ${customer.last_name || ''}`).trim().toLowerCase()
+      const matchesSearch = !needle
+        || fullName.includes(needle)
+        || String(customer.code || '').toLowerCase().includes(needle)
+        || String(customer.mobile_number || '').toLowerCase().includes(needle)
+      const matchesStatus = status === 'ALL' || String(customer.status || '').toUpperCase() === status
+      const birthdayMonth = customer.birthday_month ?? (customer.birthday ? Number(String(customer.birthday).slice(5, 7)) : null)
+      const matchesBirthMonth = birthMonth === 'ALL' || Number(birthdayMonth) === Number(birthMonth)
+      return matchesSearch
+        && matchesStatus
+        && matchesBirthMonth
+        && matchesLastVisit(customer, lastVisit)
+        && matchesLifetimeValue(customer.lifetime_value, lifetimeValue)
+    })
+  }, [birthMonth, customers, lastVisit, lifetimeValue, search, status])
+
+  async function refreshPageData() {
+    setMessage('')
+    try {
+      await load()
+    } catch (error) {
+      setMessage(getApiErrorMessage(error, 'Unable to refresh customers.'))
+    }
+  }
+
+  function resetFilters() {
+    setSearch('')
+    setStatus('ALL')
+    setBirthMonth('ALL')
+    setLastVisit('ALL')
+    setLifetimeValue('ALL')
+  }
 
   function openCreate() {
     setMessage('')
@@ -81,7 +158,6 @@ export default function CustomersPage() {
     setSaving(true)
     setMessage('')
     setFormError('')
-
     try {
       const payload = { ...form }
       delete payload.id
@@ -108,36 +184,82 @@ export default function CustomersPage() {
 
   return (
     <div className="page-stack">
-      <section className="page-heading">
-        <h1>Customers</h1>
+      <section className="page-heading live-page-heading">
+        <h1 className="live-page-title">Customers <PageRefreshButton label="Refresh customers" disabled={loading || saving} onRefresh={refreshPageData} /></h1>
         {hasPermission('customers', 'CREATE') && <button className="primary-button" type="button" onClick={openCreate}>+ Add Customer</button>}
       </section>
 
       {message ? <div className="form-alert error">{message}</div> : null}
 
-      <section className="summary-grid compact-summary">
-        <div className="summary-card"><span>Visible Customers</span><strong>{summary.total}</strong></div>
-        <div className="summary-card"><span>Active</span><strong>{summary.active}</strong></div>
-        <div className="summary-card"><span>Inactive</span><strong>{summary.inactive}</strong></div>
-      </section>
-
-      <section className="content-card">
-        <div className="toolbar-row">
-          <label className="form-field grow-field">Search<input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, mobile or customer ID" /></label>
-          <label className="form-field compact-field">Status<select value={status} onChange={(e) => setStatus(e.target.value)}><option value="ALL">All</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select></label>
+      <section className="content-card customer-list-card">
+        <div className="customer-filter-panel">
+          <label className="customer-filter-field customer-search-field">
+            <span>Search</span>
+            <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Name, mobile or customer ID" />
+          </label>
+          <label className="customer-filter-field">
+            <span>Status</span>
+            <select value={status} onChange={(event) => setStatus(event.target.value)}>
+              <option value="ALL">All</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+            </select>
+          </label>
+          <label className="customer-filter-field">
+            <span>Birth Month</span>
+            <select value={birthMonth} onChange={(event) => setBirthMonth(event.target.value)}>
+              <option value="ALL">All Months</option>
+              {months.map((month, index) => <option key={month} value={index + 1}>{month}</option>)}
+            </select>
+          </label>
+          <label className="customer-filter-field">
+            <span>Last Visit</span>
+            <select value={lastVisit} onChange={(event) => setLastVisit(event.target.value)}>
+              <option value="ALL">All</option>
+              <option value="14">Over 14 Days</option>
+              <option value="21">Over 21 Days</option>
+              <option value="30">Over 30 Days</option>
+              <option value="45">Over 45 Days</option>
+              <option value="60">Over 60 Days</option>
+              <option value="NEVER">Never Visited</option>
+            </select>
+          </label>
+          <label className="customer-filter-field customer-ltv-field">
+            <span>Lifetime Value</span>
+            <select value={lifetimeValue} onChange={(event) => setLifetimeValue(event.target.value)}>
+              <option value="ALL">All Values</option>
+              <option value="0-999">Below ₱1,000</option>
+              <option value="1000-4999">₱1,000 - ₱4,999</option>
+              <option value="5000-9999">₱5,000 - ₱9,999</option>
+              <option value="10000-19999">₱10,000 - ₱19,999</option>
+              <option value="20000-49999">₱20,000 - ₱49,999</option>
+              <option value="50000+">₱50,000+</option>
+            </select>
+          </label>
+          <button className="secondary-button customer-filter-reset" type="button" onClick={resetFilters}>Reset</button>
         </div>
 
         {loading ? <div className="empty-state">Loading customers...</div> : (
           <div className="table-wrap">
-            <table className="data-table">
-              <thead><tr><th>Customer</th><th>Mobile</th><th>Registration</th><th>Lead Source</th><th>Status</th><th>Visits</th><th className="money-cell">Lifetime Value</th><th className="actions-column">Action</th></tr></thead>
+            <table className="data-table customers-table">
+              <colgroup>
+                <col className="customer-col-name" />
+                <col className="customer-col-mobile" />
+                <col className="customer-col-registration" />
+                <col className="customer-col-source" />
+                <col className="customer-col-status" />
+                <col className="customer-col-visits" />
+                <col className="customer-col-ltv" />
+                <col className="customer-col-action" />
+              </colgroup>
+              <thead><tr><th>Customer</th><th>Mobile</th><th>Registration</th><th>Lead Source</th><th>Status</th><th>Visits</th><th className="money-column">Lifetime Value</th><th className="actions-column">Action</th></tr></thead>
               <tbody>
-                {customers.map((customer) => {
+                {filteredCustomers.map((customer) => {
                   const actions = [
                     hasPermission('customers', 'EDIT') ? { label: 'Edit', onClick: () => openEdit(customer) } : null,
                     hasPermission('customers', 'TOGGLE') ? { label: customer.status === 'ACTIVE' ? 'Deactivate' : 'Activate', danger: customer.status === 'ACTIVE', onClick: () => toggle(customer) } : null,
                   ]
-
+                  const visitCount = Number(customer.total_completed_visits || 0)
                   return (
                     <tr key={customer.id}>
                       <td><strong>{customer.full_name}</strong><span className="table-subline">{customer.code}</span></td>
@@ -145,13 +267,13 @@ export default function CustomersPage() {
                       <td>{formatDisplayDate(customer.registration_date)}</td>
                       <td>{customer.lead_source || '—'}</td>
                       <td><span className={`status-pill ${customer.status === 'ACTIVE' ? 'success' : 'neutral'}`}>{customer.status}</span></td>
-                      <td>{customer.metrics_pending ? 'Pending migration' : customer.total_completed_visits}</td>
-                      <td className="money-cell">{customer.metrics_pending ? 'Pending migration' : `₱${Number(customer.lifetime_value || 0).toLocaleString()}`}</td>
+                      <td><strong>{visitCount}</strong>{customer.last_visit ? <span className="table-subline">Last: {formatDisplayDate(customer.last_visit)}</span> : null}</td>
+                      <td className="money-cell">{peso(customer.lifetime_value)}</td>
                       <td className="action-cell"><ActionMenu items={actions} /></td>
                     </tr>
                   )
                 })}
-                {!customers.length && <tr><td colSpan="8"><div className="empty-state">No customers found.</div></td></tr>}
+                {!filteredCustomers.length && <tr><td colSpan="8"><div className="empty-state">No customers found.</div></td></tr>}
               </tbody>
             </table>
           </div>

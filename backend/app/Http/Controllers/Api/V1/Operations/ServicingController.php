@@ -67,7 +67,7 @@ class ServicingController extends Controller
     {
         $this->assertOwned($request, $visit);
         $visit->load([
-            'customer', 'booking', 'queueEntry', 'branch',
+            'customer', 'booking.payments', 'queueEntry', 'branch',
             'serviceLines.service', 'serviceLines.assignedPersonnel', 'serviceLines.completionEvent', 'retailLines',
         ]);
 
@@ -196,6 +196,7 @@ class ServicingController extends Controller
             'code' => $visit->code,
             'queue_entry' => $visit->queueEntry ? ['id' => $visit->queueEntry->id, 'code' => $visit->queueEntry->code, 'status' => $visit->queueEntry->status] : null,
             'booking' => $visit->booking ? ['id' => $visit->booking->id, 'code' => $visit->booking->code, 'status' => $visit->booking->status] : null,
+            'advance_payment_total' => round((float) ($visit->booking?->payments?->where('payment_type', 'ADVANCE')->where('status', 'RECEIVED')->sum('amount') ?? 0), 2),
             'customer' => $visit->customer ? [
                 'id' => $visit->customer->id,
                 'code' => $visit->customer->code,

@@ -4,19 +4,14 @@ import Sidebar from '../components/navigation/Sidebar'
 import AccessCodeResetModal from '../features/auth/AccessCodeResetModal'
 import { useAuth } from '../context/AuthContext'
 
-export default function AppLayout() {
-  const { user, logout } = useAuth()
-  const [collapsed, setCollapsed] = useState(false)
-  const [loggingOut, setLoggingOut] = useState(false)
+function userInitial(name) {
+  const value = String(name || '').trim()
+  return value ? value.charAt(0).toUpperCase() : 'Y'
+}
 
-  async function handleLogout() {
-    setLoggingOut(true)
-    try {
-      await logout()
-    } finally {
-      setLoggingOut(false)
-    }
-  }
+export default function AppLayout() {
+  const { user } = useAuth()
+  const [collapsed, setCollapsed] = useState(false)
 
   return (
     <div className="app-shell">
@@ -25,14 +20,12 @@ export default function AppLayout() {
       <div className="app-main">
         <header className="topbar">
           <div className="topbar-spacer" />
-          <div className="user-menu">
+          <div className="topbar-user-identity">
+            <span className="user-avatar" aria-hidden="true">{userInitial(user?.display_name)}</span>
             <div className="user-meta">
               <strong>{user?.display_name}</strong>
               <span>{user?.role?.name}</span>
             </div>
-            <button className="secondary-button" type="button" onClick={handleLogout} disabled={loggingOut}>
-              {loggingOut ? 'Signing out...' : 'Sign Out'}
-            </button>
           </div>
         </header>
 

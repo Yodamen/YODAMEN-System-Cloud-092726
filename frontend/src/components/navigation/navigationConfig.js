@@ -20,7 +20,7 @@ export const navigationSections = [
     items: [
       { label: 'Dashboard', module: 'sales-dashboard' },
       { label: 'Z-Reading', module: 'sales' },
-      { label: 'Transactions', module: 'sales' },
+      { label: 'Transactions', path: '/sales/transactions', module: 'sales', enabled: true },
     ],
   },
   {

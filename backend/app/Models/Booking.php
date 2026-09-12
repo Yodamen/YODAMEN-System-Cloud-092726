@@ -78,6 +78,16 @@ class Booking extends Model
         return $this->hasOne(Visit::class);
     }
 
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function sale(): HasOne
+    {
+        return $this->hasOne(Sale::class);
+    }
+
     public function canCheckIn(): bool
     {
         return strtoupper((string) $this->status) === 'BOOKED'

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Visit extends Model
 {
@@ -34,6 +35,7 @@ class Visit extends Model
     public function serviceLines(): HasMany { return $this->hasMany(VisitServiceLine::class)->orderBy('sort_order')->orderBy('id'); }
     public function retailLines(): HasMany { return $this->hasMany(VisitRetailLine::class)->orderBy('sort_order')->orderBy('id'); }
     public function completionEvents(): HasMany { return $this->hasMany(ServiceCompletionEvent::class); }
+    public function sale(): HasOne { return $this->hasOne(Sale::class); }
 
     public function isInService(): bool
     {

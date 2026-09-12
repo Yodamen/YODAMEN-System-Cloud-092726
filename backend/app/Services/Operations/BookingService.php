@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\Foundation\BusinessClock;
 use App\Services\Foundation\CodeSequenceService;
 use App\Services\Security\AuditService;
+use App\Services\Sales\PaymentLedgerService;
 use DomainException;
 use Illuminate\Support\Facades\DB;
 
@@ -20,6 +21,7 @@ class BookingService
         private readonly CodeSequenceService $codes,
         private readonly AuditService $audit,
         private readonly BusinessClock $clock,
+        private readonly PaymentLedgerService $payments,
     ) {
     }
 
@@ -129,6 +131,10 @@ class BookingService
                 after: $this->snapshot($booking),
                 actor: $actor,
             );
+
+            if ($isNew) {
+                $this->payments->recordInitialAdvance($actor, $booking, $data['advance_payment'] ?? null);
+            }
 
             return $booking;
         });
@@ -300,6 +306,8 @@ class BookingService
                 actor: $actor,
                 metadata: ['source' => 'WALK_IN'],
             );
+
+            $this->payments->recordInitialAdvance($actor, $booking, $data['advance_payment'] ?? null);
 
             return $booking;
         });

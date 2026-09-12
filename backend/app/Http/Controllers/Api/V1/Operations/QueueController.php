@@ -9,6 +9,7 @@ use App\Models\Booking;
 use App\Models\Customer;
 use App\Models\Personnel;
 use App\Models\QueueEntry;
+use App\Models\ReferenceGroup;
 use App\Models\Service;
 use App\Models\ServicePrice;
 use App\Services\Foundation\BusinessClock;
@@ -38,8 +39,10 @@ class QueueController extends Controller
                 ->orderBy('last_name')->orderBy('first_name')->get(['id', 'code', 'first_name', 'last_name'])
                 ->map(fn ($row) => ['id' => $row->id, 'code' => $row->code, 'name' => trim($row->first_name.' '.$row->last_name)]),
             'customer_types' => [['code' => 'NEW', 'value' => 'New'], ['code' => 'RETURNEE', 'value' => 'Returnee']],
+            'payment_methods' => $this->paymentMethods($user->business_id),
+            'can_receive_advance' => $user->hasPermission('payments', 'CREATE'),
             'phase_notes' => [
-                'advance_payment' => 'Advance payment is intentionally deferred until the immutable Payments ledger is active.',
+                'advance_payment' => 'Advance cash is recorded in the immutable Payments ledger when the Walk-In is created.',
                 'service_credit' => 'Service Credit claims activate with Package Enrollment and Service Credit tables.',
                 'servicing' => 'Start Servicing now creates one Visit from the waiting Queue entry. Financial finalization remains separate.',
             ],
@@ -59,7 +62,7 @@ class QueueController extends Controller
     public function show(Request $request, QueueEntry $queueEntry): JsonResponse
     {
         $this->assertOwned($request, $queueEntry);
-        $queueEntry->load(['customer', 'booking', 'branch', 'visit', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines']);
+        $queueEntry->load(['customer', 'booking.payments', 'branch', 'visit', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines']);
         return response()->json(['queue_entry' => $this->resource($queueEntry)]);
     }
 
@@ -84,6 +87,18 @@ class QueueController extends Controller
         return response()->json(['queue_entry' => $this->resource($queue)]);
     }
 
+
+    private function paymentMethods(int $businessId): array
+    {
+        $group = ReferenceGroup::query()->where('business_id', $businessId)->where('code', 'PAYMENT_METHOD')->first();
+        if (! $group) return [];
+
+        return $group->values()->where('active', true)->orderBy('sort_order')->orderBy('display_value')
+            ->get(['id', 'code', 'display_value'])
+            ->map(fn ($row) => ['id' => $row->id, 'code' => $row->code, 'name' => $row->display_value])
+            ->values()->all();
+    }
+
     private function serviceOptions(int $businessId, ?int $branchId): array
     {
         return Service::query()->with(['statusReference', 'category'])->where('business_id', $businessId)
@@ -105,6 +120,7 @@ class QueueController extends Controller
         return [
             'id' => $row->id, 'code' => $row->code, 'priority_no' => $row->getAttribute('priority_no'),
             'booking' => $row->booking ? ['id' => $row->booking->id, 'code' => $row->booking->code, 'status' => $row->booking->status] : null,
+            'advance_payment_total' => round((float) ($row->booking?->payments?->where('payment_type', 'ADVANCE')->where('status', 'RECEIVED')->sum('amount') ?? 0), 2),
             'customer' => $row->customer ? ['id' => $row->customer->id, 'code' => $row->customer->code,
                 'name' => trim($row->customer->first_name.' '.$row->customer->last_name), 'mobile_number' => $row->customer->mobile_number] : null,
             'branch' => $row->branch ? ['id' => $row->branch->id, 'code' => $row->branch->code, 'name' => $row->branch->name] : null,

@@ -74,3 +74,22 @@ Required work dates must satisfy the approved Z-Reading/EOD close gate before pa
 `Eligible Partner Configuration -> ProfitSharing DRAFT -> APPROVED -> PAID`
 
 Partner percentages are snapshotted at the applicable Period End. Approved/Paid history remains immutable.
+
+## Phase 3A Sales Core boundary
+
+`Booking/Walk-In -> optional ADVANCE Payment -> Queue -> Visit -> completed service lines -> Visit COMPLETED -> Sale Draft + Sale Items -> Pending Transactions`
+
+Rules implemented in Phase 3A:
+
+- Advance cash is stored only in `payments`, never as a Booking money field.
+- Rebooking keeps the same Booking and the same Advance Payment.
+- Advance receipt does not finalize a Sale and does not create commission.
+- Visit completion creates exactly one parent Sale using SQL uniqueness on `sales.visit_id`.
+- Each completed Visit service creates one durable Sale Item source; cancelled service lines are excluded.
+- Visit retail snapshots become Sale Items.
+- Existing received Advance Payments are linked to the Sale when the Sale is created.
+- `FOR_CHECKOUT`: no received payment yet.
+- `PARTIALLY_PAID`: Advance exists but current chargeable gross remains outstanding.
+- `AWAITING_CONFIRM`: received Advance covers the current gross, but explicit financial confirmation is still required.
+- Pending Transactions remains one row per parent Sale/Booking.
+- No Payment Application or line settlement is created until Phase 4.

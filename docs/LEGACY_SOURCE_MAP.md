@@ -49,3 +49,18 @@ Historical V-number aliases and repair scripts are implementation evidence. The 
 | `addVisitServiceAdmin` NEW_SERVICE branch | `POST /api/v1/operations/servicing/{visit}/services` |
 | operational completion downstream hook | `service_completion_events` |
 | `getServicingAdmin` / Servicing UI | `GET /api/v1/operations/servicing`, `ServicingPage.jsx` |
+
+## Phase 3A mappings
+
+| Legacy Apps Script / Sheet | Target |
+|---|---|
+| `DB_Sales` / `Sales.js` | `sales`, `Sale`, `SaleDraftService` |
+| `DB_SalesItems` | `sale_items`, `SaleItem` |
+| `DB_SalesPayments` | `payments`, `Payment`, `PaymentLedgerService` |
+| `recordInitialAdvancePayment_` | Advance Payment creation inside Booking/Walk-In transaction |
+| `getBookingAdvanceAmount_` | Payment-ledger aggregate by Booking |
+| `syncSalesFromOperations_` | automatic `SaleDraftService::ensureForCompletedVisit()` + `yodamen:sales-sync` backfill command |
+| `linkBookingAdvancePaymentsToSale_` | Sale creation links received Booking advances to Sale/Visit |
+| Pending Transactions parent view | `GET /api/v1/sales/transactions/pending`, React `TransactionsPage` |
+| Checkout detail read | `GET /api/v1/sales/transactions/{sale}/checkout` |
+| Apps Script duplicate Sales repair | SQL unique `sales.visit_id` + transactional row locking; repair runtime not ported |

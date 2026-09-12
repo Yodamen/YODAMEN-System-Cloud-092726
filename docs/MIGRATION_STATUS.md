@@ -150,3 +150,42 @@ No backend schema or business-rule migration is required for this correction.
 - Replaced service/item counts with actual vertically stacked service names in Bookings and Queuing.
 - Converted Servicing overview to a compact table with a Services column while retaining service-level management through a Manage modal.
 - Frontend-only. No database migration required.
+
+## Phase 3A - Sales Core
+Status: **IMPLEMENTED PACKAGE, awaiting local migration/tests/UI acceptance.**
+
+Includes:
+
+- normalized `sales`, `sale_items`, and immutable `payments` ledger tables
+- one Sale per completed Visit enforced by a unique database constraint
+- one durable Sale Item per Visit service/retail source
+- automatic Sale draft creation when a Visit becomes operationally `COMPLETED`
+- received Advance Payments at Reservation Booking and Walk-In creation
+- Advance Payment retention through rebooking
+- automatic linking of Booking Advance Payments to the later Sale/Visit
+- Pending parent Transactions page
+- pending checkout detail showing Sale Items and received payments
+- `FOR_CHECKOUT`, `PARTIALLY_PAID`, and `AWAITING_CONFIRM` pre-finalization states
+- `yodamen:sales-sync` command for completed Visits created before Phase 3A installation
+- payment-create permission for Manager and Reception
+- database/audit safeguards against duplicate Sale creation
+
+Phase boundary remains enforced:
+
+- Phase 3A does **not** create Payment Applications.
+- Checkout allocation/finalization is disabled until Phase 4.
+- On Account/Paid/Service Credit line settlement is not activated yet.
+- Commission is not created by service completion or advance receipt.
+- Package/Service Credit financial logic remains Phase 5.
+
+## Phase 3A parity / UI correction 01
+Status: **IMPLEMENTED PACKAGE, awaiting local lint/build/tests/UI acceptance.**
+
+Refines Advance Payment modal sizing, restores legacy-style user/access identity blocks, adds payment visibility across Booking/Queue/Servicing, reorganizes Queue references, adds inline New Customer shortcuts to Booking/Walk-In creation, and removes Branch from the Booking list display. Payment indicators are projections from the immutable Payment ledger rather than duplicated operational state.
+
+## Phase 3A parity / UI correction 02
+Status: **IMPLEMENTED PACKAGE, awaiting local lint/build/tests/UI acceptance.**
+
+Adds the full legacy Customer filter panel (Search, Status, Birth Month, Last Visit, Lifetime Value, Reset) and activates Customer visit/LTV projections now that Visit and Payment ledgers exist. Standardizes table spacing across active modules, replaces native browser confirmations with branded YODAMEN confirmation modals, makes Booking ID the leading reference column across Bookings/Servicing/Transactions (and immediately after queue sequence in Queuing), removes Servicing Check-In as a standalone column, exposes actual Services in Pending Transactions, applies proper-case Booking Source display, and removes duplicate Advance Payment Notes inputs from Booking/Walk-In forms.
+
+No database migration is required for this correction.

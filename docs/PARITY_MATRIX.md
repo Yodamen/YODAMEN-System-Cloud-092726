@@ -27,8 +27,8 @@ Legend: `DONE` target behavior implemented; `VALIDATE` implemented but pending u
 | Booking | `BookingVisits.js` | DONE | DONE | DONE | Booking tests | DONE |
 | Queue | `BookingVisits.js` + `QueueVisitSetup.js` | VALIDATE | VALIDATE | VALIDATE | Queue tests | VALIDATE |
 | Visit / Servicing | `BookingVisits.js`, `QueueVisitSetup.js`, Servicing UI | VALIDATE | VALIDATE | VALIDATE | ServicingTest | VALIDATE |
-| Sales creation | `Sales.js` | PLANNED | PLANNED | PLANNED | race/idempotency | PLANNED |
-| Payment ledger | `Sales.js` | PLANNED | PLANNED | PLANNED | waterfall | PLANNED |
+| Sales creation | `Sales.js` | VALIDATE | VALIDATE | VALIDATE | Sales core tests | VALIDATE |
+| Payment ledger | `Sales.js` | VALIDATE | VALIDATE | VALIDATE | Sales core tests | VALIDATE |
 | Payment allocation | `ServicingPaymentAllocation.js` | PLANNED | PLANNED | PLANNED | allocation | PLANNED |
 | Package Enrollment | Service Credit sources | PLANNED | PLANNED | PLANNED | package | PLANNED |
 | Service Credits | `ServiceCredit.js` | PLANNED | PLANNED | PLANNED | package/credit | PLANNED |
@@ -113,3 +113,32 @@ Legend: `DONE` target behavior implemented; `VALIDATE` implemented but pending u
 | Booking services display | Actual service names | Matched, vertically stacked |
 | Queue services display | Actual service names | Matched, vertically stacked |
 | Servicing services display | Services column with actual service names | Matched with compact overview + Manage workflow |
+
+## Phase 3A Parity Correction 01
+
+| Area | Target behavior | Status |
+|---|---|---|
+| Advance Payment input | Compact amount field + readable Payment Method layout | Implemented, awaiting local acceptance |
+| Header identity | User initial + username + access/role title | Implemented |
+| Sidebar footer | Username/role + YODAMEN/Grooming Lounge + Logout | Implemented |
+| Booking Branch display | Branch removed from Booking list | Implemented |
+| Booking Payment | Advance amount projection or Unpaid | Implemented |
+| Queue Customer | Source shown as Walk-In / Reservation subline | Implemented |
+| Queue References | Booking ID + Queue ID/check-in time; no standalone Check-In column | Implemented |
+| Queue Payment | Advance amount projection or Unpaid | Implemented |
+| Servicing Payment | Advance amount projection or Unpaid | Implemented |
+| New Customer shortcut | Available inside New Booking and New Walk-In | Implemented |
+
+## Phase 3A Parity Correction 02
+
+| Area | Target behavior | Status |
+|---|---|---|
+| Customer filters | Search / Status / Birth Month / Last Visit / Lifetime Value / Reset | Implemented |
+| Customer metrics | Completed Visits, Last Visit and actual collected Lifetime Value | Implemented from Visit + Sale/Payment ledgers |
+| Global table spacing | Compact balanced columns; money/action columns shrink to content | Implemented |
+| Confirmation dialogs | Branded modal instead of browser-native confirm | Implemented for Booking Check-In, Queue Start Servicing and Service Completion |
+| Booking ID placement | Leading identifier column; queue retains sequence before it | Implemented |
+| Booking Source | Proper capitalization | Implemented |
+| Servicing columns | Standalone Check-In removed | Implemented |
+| Transactions Pending | Services names replace item count | Implemented |
+| Booking / Walk-In Advance | Duplicate payment Notes field removed | Implemented |

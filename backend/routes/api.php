@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\Operations\BookingController;
 use App\Http\Controllers\Api\V1\Operations\CustomerController;
 use App\Http\Controllers\Api\V1\Operations\QueueController;
 use App\Http\Controllers\Api\V1\Operations\ServicingController;
+use App\Http\Controllers\Api\V1\Sales\TransactionsController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -93,6 +94,13 @@ Route::prefix('v1')->group(function () {
                 ->middleware('permission:servicing,EDIT');
             Route::post('/servicing/{visit}/complete', [ServicingController::class, 'completeVisit'])
                 ->middleware('permission:servicing,COMPLETE');
+        });
+
+        Route::prefix('sales')->group(function () {
+            Route::get('/transactions/pending', [TransactionsController::class, 'pending'])
+                ->middleware('permission:sales,VIEW');
+            Route::get('/transactions/{sale}/checkout', [TransactionsController::class, 'checkout'])
+                ->middleware('permission:sales,VIEW');
         });
 
         Route::prefix('admin')->group(function () {

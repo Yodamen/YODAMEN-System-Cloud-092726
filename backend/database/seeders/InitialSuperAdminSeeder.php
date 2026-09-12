@@ -31,8 +31,8 @@ class InitialSuperAdminSeeder extends Seeder
                 'business_id' => $business->id,
                 'default_branch_id' => $existing->default_branch_id ?: $branch->id,
                 'role_id' => $role->id,
-                'name' => $existing->name ?: env('YODAMEN_SUPER_ADMIN_DISPLAY_NAME', 'Super Admin'),
-                'display_name' => $existing->display_name ?: env('YODAMEN_SUPER_ADMIN_DISPLAY_NAME', 'Super Admin'),
+                'name' => env('YODAMEN_SUPER_ADMIN_DISPLAY_NAME', $existing->name ?: 'Super Admin'),
+                'display_name' => env('YODAMEN_SUPER_ADMIN_DISPLAY_NAME', $existing->display_name ?: 'Super Admin'),
                 'status' => 'ACTIVE',
             ])->save();
 

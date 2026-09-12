@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, getApiErrorMessage } from '../../api/client'
 import ActionMenu from '../../components/common/ActionMenu'
 import Modal from '../../components/common/Modal'
+import ConfirmationModal from '../../components/common/ConfirmationModal'
 import ServiceList from '../../components/common/ServiceList'
 import { useAuth } from '../../context/AuthContext'
 import PageRefreshButton from '../../components/common/PageRefreshButton'
+import PaymentIndicator from '../../components/operations/PaymentIndicator'
 
 const emptyAddService = { service_id: '', quantity: 1, assigned_personnel_id: '', notes: '' }
 
@@ -14,6 +16,7 @@ export default function ServicingPage() {
   const [rows, setRows] = useState([])
   const [manageVisitId, setManageVisitId] = useState(null)
   const [cancelService, setCancelService] = useState(null)
+  const [completeCandidate, setCompleteCandidate] = useState(null)
   const [addService, setAddService] = useState(null)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -71,12 +74,13 @@ export default function ServicingPage() {
     }
   }
 
-  async function completeLine(serviceLine) {
-    if (!window.confirm(`Complete ${serviceLine.service_name}? This records operational completion only.`)) return
+  async function completeLine(candidate) {
+    const serviceLine = candidate.serviceLine
     setSaving(true)
     setMessage('')
     try {
       await api.post(`/v1/operations/visit-services/${serviceLine.id}/complete`)
+      setCompleteCandidate(null)
       await refresh()
     } catch (error) {
       setMessage(getApiErrorMessage(error, 'Unable to complete service.'))
@@ -138,7 +142,7 @@ export default function ServicingPage() {
         {loading ? <div className="empty-state live-empty-state">Loading Servicing...</div> : (
           <div className="table-wrap">
             <table className="data-table servicing-overview-table">
-              <thead><tr><th>Visit</th><th>Booking</th><th>Check-In</th><th>Customer</th><th>Services</th><th>Status</th><th className="actions-column">Action</th></tr></thead>
+              <thead><tr><th>Visit</th><th>Booking</th><th>Check-In</th><th>Customer</th><th>Services</th><th>Payment</th><th>Status</th><th className="actions-column">Action</th></tr></thead>
               <tbody>
                 {rows.map((visit) => (
                   <tr key={visit.id}>
@@ -147,11 +151,12 @@ export default function ServicingPage() {
                     <td>{visit.check_in_time || '—'}</td>
                     <td><strong>{visit.customer?.name || '—'}</strong></td>
                     <td><ServiceList services={visit.services} excludeCancelled /></td>
+                    <td><PaymentIndicator advanceAmount={visit.advance_payment_total} /></td>
                     <td><span className={`status-pill ${statusClass(visit.status)}`}>{visit.status}</span></td>
                     <td className="action-cell"><ActionMenu items={[{ label: 'Manage', onClick: () => setManageVisitId(visit.id) }]} /></td>
                   </tr>
                 ))}
-                {!rows.length ? <tr><td colSpan="7"><div className="empty-state live-empty-state">No on-going services right now.</div></td></tr> : null}
+                {!rows.length ? <tr><td colSpan="8"><div className="empty-state live-empty-state">No on-going services right now.</div></td></tr> : null}
               </tbody>
             </table>
           </div>
@@ -185,7 +190,7 @@ export default function ServicingPage() {
                   <span className="table-subline">Start {line.started_time || '—'}{line.completed_time ? ` · Done ${line.completed_time}` : ''}</span>
                 </div>
                 <div className="row-actions servicing-actions">
-                  {line.can_complete && canComplete && line.status !== 'COMPLETED' ? <button className="link-button" type="button" disabled={saving} onClick={() => completeLine(line)}>Complete</button> : null}
+                  {line.can_complete && canComplete && line.status !== 'COMPLETED' ? <button className="link-button" type="button" disabled={saving} onClick={() => setCompleteCandidate({ serviceLine: line, visit: managedVisit })}>Complete</button> : null}
                   {line.can_cancel && canEdit && line.status !== 'CANCELLED' ? <button className="link-button danger-link" type="button" disabled={saving} onClick={() => setCancelService({ id: line.id, name: line.service_name, reason: '' })}>Cancel</button> : null}
                   {line.completion_event ? <span className="table-subline">{line.completion_event.code}</span> : null}
                 </div>
@@ -194,6 +199,20 @@ export default function ServicingPage() {
           </div>
           {managedVisit.retail_items.length ? <div className="servicing-retail-summary"><strong>Retail snapshot:</strong> {managedVisit.retail_items.map((item) => `${item.item_name} ×${item.quantity}`).join(', ')}</div> : null}
         </Modal>
+      )}
+
+
+      {completeCandidate && (
+        <ConfirmationModal
+          customerName={completeCandidate.visit?.customer?.name}
+          bookingCode={completeCandidate.visit?.booking?.code}
+          services={[completeCandidate.serviceLine]}
+          cancelLabel="Cancel"
+          confirmLabel="Complete Service"
+          busy={saving}
+          onCancel={() => setCompleteCandidate(null)}
+          onConfirm={() => completeLine(completeCandidate)}
+        />
       )}
 
       {cancelService && (
