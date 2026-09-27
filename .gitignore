@@ -82,3 +82,9 @@ backend/coverage/
 *.bak
 *.backup
 *.old
+
+# React production build copied into Laravel public during cloud deployment
+backend/public/index.html
+backend/public/assets/
+backend/public/favicon.svg
+backend/public/icons.svg
