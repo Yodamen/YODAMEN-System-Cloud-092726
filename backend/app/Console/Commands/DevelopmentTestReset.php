@@ -118,7 +118,7 @@ class DevelopmentTestReset extends Command
         $now = Carbon::now();
         $expiresAt = $now->copy()->addMinutes(self::ARM_MINUTES);
 
-        Storage::disk('local')->put(self::ARM_FILE, json_encode([
+        Storage::disk(config('filesystems.state_disk'))->put(self::ARM_FILE, json_encode([
             'nonce' => (string) Str::uuid(),
             'user_id' => $user->id,
             'username' => $user->username,
@@ -241,7 +241,7 @@ class DevelopmentTestReset extends Command
 
     private function cancel(): int
     {
-        if (! Storage::disk('local')->exists(self::ARM_FILE)) {
+        if (! Storage::disk(config('filesystems.state_disk'))->exists(self::ARM_FILE)) {
             $this->line('TEST DEVRESET is not currently armed.');
 
             return self::SUCCESS;
@@ -293,18 +293,18 @@ class DevelopmentTestReset extends Command
     /** @return array<string, mixed>|null */
     private function readArmState(): ?array
     {
-        if (! Storage::disk('local')->exists(self::ARM_FILE)) {
+        if (! Storage::disk(config('filesystems.state_disk'))->exists(self::ARM_FILE)) {
             return null;
         }
 
-        $decoded = json_decode((string) Storage::disk('local')->get(self::ARM_FILE), true);
+        $decoded = json_decode((string) Storage::disk(config('filesystems.state_disk'))->get(self::ARM_FILE), true);
 
         return is_array($decoded) ? $decoded : null;
     }
 
     private function removeArmState(): void
     {
-        Storage::disk('local')->delete(self::ARM_FILE);
+        Storage::disk(config('filesystems.state_disk'))->delete(self::ARM_FILE);
     }
 
     private function isAllowedEnvironment(): bool

@@ -26,11 +26,11 @@ class PublicBrandingController extends Controller
     public function logo(Business $business): StreamedResponse
     {
         $record = BusinessBrandingSetting::query()->where('business_id', $business->id)->firstOrFail();
-        abort_unless($record->logo_source === 'UPLOAD' && $record->logo_path && Storage::disk('local')->exists($record->logo_path), 404);
+        abort_unless($record->logo_source === 'UPLOAD' && $record->logo_path && Storage::disk(config('filesystems.default'))->exists($record->logo_path), 404);
 
-        $mime = Storage::disk('local')->mimeType($record->logo_path) ?: 'image/png';
+        $mime = Storage::disk(config('filesystems.default'))->mimeType($record->logo_path) ?: 'image/png';
 
-        return Storage::disk('local')->response(
+        return Storage::disk(config('filesystems.default'))->response(
             $record->logo_path,
             null,
             [

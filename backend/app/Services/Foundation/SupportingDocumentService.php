@@ -37,7 +37,7 @@ class SupportingDocumentService
         $path = $file->storeAs(
             'supporting-documents/'.$actor->business_id.'/temp/'.now()->format('Ym'),
             $token.'-'.$safeName,
-            'local',
+            config('filesystems.default'),
         );
 
         return SupportingDocument::query()->create([
@@ -46,7 +46,7 @@ class SupportingDocumentService
             'purpose' => $purpose ? trim($purpose) : null,
             'upload_token' => $token,
             'state' => 'TEMP',
-            'disk' => 'local',
+            'disk' => config('filesystems.default'),
             'path' => $path,
             'original_name' => $file->getClientOriginalName(),
             'mime_type' => $file->getMimeType(),

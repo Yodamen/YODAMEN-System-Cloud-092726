@@ -72,7 +72,7 @@ class DevelopmentResetController extends Controller
         $expiresAt = $now->copy()->addMinutes(self::ARM_MINUTES);
         $nonce = (string) Str::uuid();
 
-        Storage::disk('local')->put($this->armFile($user, $mode), json_encode([
+        Storage::disk(config('filesystems.state_disk'))->put($this->armFile($user, $mode), json_encode([
             'nonce' => $nonce,
             'mode' => $mode,
             'user_id' => $user->id,
@@ -109,7 +109,7 @@ class DevelopmentResetController extends Controller
         try {
             $deleted = $mode === self::MODE_FULL ? $reset->execute() : $reset->executeTest();
         } finally {
-            Storage::disk('local')->delete($this->armFile($user, $mode));
+            Storage::disk(config('filesystems.state_disk'))->delete($this->armFile($user, $mode));
         }
 
         return response()->json([
@@ -126,7 +126,7 @@ class DevelopmentResetController extends Controller
         $user = $this->assertSuperAdmin($request);
         $data = $request->validate(['mode' => ['required', 'in:FULL,TEST_ONLY']]);
         $mode = strtoupper((string) $data['mode']);
-        Storage::disk('local')->delete($this->armFile($user, $mode));
+        Storage::disk(config('filesystems.state_disk'))->delete($this->armFile($user, $mode));
 
         return response()->json(['message' => 'Development reset arm cancelled.', 'mode' => $mode]);
     }
@@ -162,17 +162,17 @@ class DevelopmentResetController extends Controller
     private function readValidatedArm(User $user, string $mode, string $token): array
     {
         $file = $this->armFile($user, $mode);
-        abort_unless(Storage::disk('local')->exists($file), 422, 'This reset is not armed. Preview and arm it again.');
+        abort_unless(Storage::disk(config('filesystems.state_disk'))->exists($file), 422, 'This reset is not armed. Preview and arm it again.');
 
-        $arm = json_decode((string) Storage::disk('local')->get($file), true);
+        $arm = json_decode((string) Storage::disk(config('filesystems.state_disk'))->get($file), true);
         if (! is_array($arm)) {
-            Storage::disk('local')->delete($file);
+            Storage::disk(config('filesystems.state_disk'))->delete($file);
             abort(422, 'The reset arm state is invalid. Arm it again.');
         }
 
         $expiresAt = Carbon::parse((string) ($arm['expires_at'] ?? '1970-01-01'));
         if (Carbon::now()->greaterThan($expiresAt)) {
-            Storage::disk('local')->delete($file);
+            Storage::disk(config('filesystems.state_disk'))->delete($file);
             abort(422, 'The reset arm window expired. Arm it again.');
         }
 
@@ -184,7 +184,7 @@ class DevelopmentResetController extends Controller
             && (string) ($arm['database'] ?? '') === $database;
 
         if (! $valid) {
-            Storage::disk('local')->delete($file);
+            Storage::disk(config('filesystems.state_disk'))->delete($file);
             abort(422, 'The reset arm state no longer matches this session/environment. Arm it again.');
         }
 
@@ -194,15 +194,15 @@ class DevelopmentResetController extends Controller
     private function publicArmState(User $user, string $mode): ?array
     {
         $file = $this->armFile($user, $mode);
-        if (! Storage::disk('local')->exists($file)) return null;
-        $arm = json_decode((string) Storage::disk('local')->get($file), true);
+        if (! Storage::disk(config('filesystems.state_disk'))->exists($file)) return null;
+        $arm = json_decode((string) Storage::disk(config('filesystems.state_disk'))->get($file), true);
         if (! is_array($arm)) {
-            Storage::disk('local')->delete($file);
+            Storage::disk(config('filesystems.state_disk'))->delete($file);
             return null;
         }
         $expiresAt = Carbon::parse((string) ($arm['expires_at'] ?? '1970-01-01'));
         if (Carbon::now()->greaterThan($expiresAt)) {
-            Storage::disk('local')->delete($file);
+            Storage::disk(config('filesystems.state_disk'))->delete($file);
             return null;
         }
 

@@ -326,7 +326,7 @@ class AttendanceService
             });
         } catch (\Throwable $exception) {
             if ($storedPath) {
-                Storage::disk('local')->delete($storedPath);
+                Storage::disk(config('filesystems.default'))->delete($storedPath);
             }
 
             throw $exception;
@@ -391,7 +391,7 @@ class AttendanceService
             });
         } catch (\Throwable $exception) {
             if ($storedPath) {
-                Storage::disk('local')->delete($storedPath);
+                Storage::disk(config('filesystems.default'))->delete($storedPath);
             }
 
             throw $exception;
@@ -662,7 +662,7 @@ class AttendanceService
             default => 'jpg',
         };
         $fileName = strtolower(str_replace('_', '-', $proofType)).'-'.Str::uuid().'.'.$extension;
-        $path = $file->storeAs($folder, $fileName, 'local');
+        $path = $file->storeAs($folder, $fileName, config('filesystems.default'));
 
         if (! $path) {
             throw new DomainException('Unable to store the attendance proof photo.');
@@ -672,7 +672,7 @@ class AttendanceService
             'attendance_id' => $attendance->id,
             'business_id' => $actor->business_id,
             'proof_type' => $proofType,
-            'disk' => 'local',
+            'disk' => config('filesystems.default'),
             'path' => $path,
             'original_name' => $file->getClientOriginalName(),
             'mime_type' => (string) $file->getMimeType(),

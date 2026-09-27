@@ -269,10 +269,10 @@ class ExpenseService
         }
 
         $safeName = preg_replace('/[^A-Za-z0-9._-]+/', '-', $file->getClientOriginalName()) ?: 'document';
-        $path = $file->storeAs('expenses/'.$expense->business_id.'/'.$expense->code, now()->format('YmdHis').'-'.$safeName, 'local');
+        $path = $file->storeAs('expenses/'.$expense->business_id.'/'.$expense->code, now()->format('YmdHis').'-'.$safeName, config('filesystems.default'));
 
         $expense->update([
-            'attachment_disk' => 'local',
+            'attachment_disk' => config('filesystems.default'),
             'attachment_path' => $path,
             'attachment_name' => $file->getClientOriginalName(),
             'attachment_mime' => $file->getMimeType(),

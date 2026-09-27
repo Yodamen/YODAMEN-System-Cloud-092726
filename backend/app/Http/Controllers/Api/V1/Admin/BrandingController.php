@@ -83,7 +83,7 @@ class BrandingController extends Controller
         }
 
         if ($source !== 'UPLOAD' && $record->logo_path) {
-            Storage::disk('local')->delete($record->logo_path);
+            Storage::disk(config('filesystems.default'))->delete($record->logo_path);
             $record->logo_path = null;
         }
 
@@ -144,7 +144,7 @@ class BrandingController extends Controller
 
         $before = $record->toArray();
         if ($record->logo_path) {
-            Storage::disk('local')->delete($record->logo_path);
+            Storage::disk(config('filesystems.default'))->delete($record->logo_path);
         }
 
         $file = $request->file('logo');
@@ -152,7 +152,7 @@ class BrandingController extends Controller
         $path = $file->storeAs(
             "branding/{$businessId}",
             'logo.'.preg_replace('/[^a-z0-9]/', '', $extension),
-            'local',
+            config('filesystems.default'),
         );
 
         $record->update([
