@@ -5,6 +5,7 @@ use App\Models\Customer;
 use App\Models\Personnel;
 use App\Models\QueueEntry;
 use App\Models\ReferenceGroup;
+use App\Models\ReferenceValue;
 use App\Models\Role;
 use App\Models\Service;
 use Database\Seeders\FoundationSeeder;
@@ -154,4 +155,78 @@ it('does not strip existing reception permissions when foundation seeders are re
 
     $codes = $role->fresh()->permissions()->pluck('code')->all();
     expect($codes)->toContain('queue.EDIT')->and($codes)->toContain('queue.CREATE')->and($codes)->toContain('bookings.CREATE');
+});
+
+
+it('requires payment proof for a non-cash walk-in payment while cash is exempt', function () {
+    $fx = queueFixture();
+    $group = ReferenceGroup::query()->where('business_id', $fx['user']->business_id)->where('code', 'PAYMENT_METHOD')->firstOrFail();
+    $cash = ReferenceValue::query()->create([
+        'reference_group_id' => $group->id,
+        'code' => 'CASH-WALKIN-PROOF',
+        'display_value' => 'Cash',
+        'sort_order' => 10,
+        'active' => true,
+    ]);
+    $gcash = ReferenceValue::query()->create([
+        'reference_group_id' => $group->id,
+        'code' => 'GCASH-WALKIN-PROOF',
+        'display_value' => 'GCash',
+        'sort_order' => 20,
+        'active' => true,
+    ]);
+    mapCustomerPaymentMethod($fx['user'], $cash);
+    mapCustomerPaymentMethod($fx['user'], $gcash, 'POS_CLEARING');
+
+    $base = [
+        'customer_id' => $fx['customer']->id,
+        'customer_type' => 'RETURNEE',
+        'services' => [[
+            'service_id' => $fx['service']->id,
+            'quantity' => 1,
+            'assigned_personnel_id' => $fx['personnel']->id,
+        ]],
+        'retail_items' => [],
+    ];
+
+    $this->actingAs($fx['user'])->postJson('/api/v1/operations/queue/walk-ins', $base + [
+        'payment_collection' => [
+            'collected' => true,
+            'amount' => 100,
+            'advance_amount' => 100,
+            'payment_method_reference_id' => $gcash->id,
+            'allocations' => [],
+        ],
+    ])->assertStatus(422)
+        ->assertJsonPath('message', 'Walk-In payment proof is required for non-cash payments such as GCash, bank transfer, e-wallet or card. Cash payments are exempt.');
+
+    expect(Booking::count())->toBe(0)->and(QueueEntry::count())->toBe(0);
+
+    $proofToken = $this->supportingDocumentToken($fx['user'], 'bookings', 'walkin-gcash-proof.pdf');
+    $created = $this->actingAs($fx['user'])->postJson('/api/v1/operations/queue/walk-ins', $base + [
+        'payment_collection' => [
+            'collected' => true,
+            'amount' => 100,
+            'advance_amount' => 100,
+            'payment_method_reference_id' => $gcash->id,
+            'allocations' => [],
+            'attachment_tokens' => [$proofToken],
+        ],
+    ])->assertCreated();
+
+    $this->actingAs($fx['user'])
+        ->getJson('/api/v1/supporting-documents?entity_type=BOOKING_PAYMENT&entity_id='.$created->json('queue_entry.booking.id'))
+        ->assertOk()
+        ->assertJsonCount(1, 'documents')
+        ->assertJsonPath('documents.0.name', 'walkin-gcash-proof.pdf');
+
+    $this->actingAs($fx['user'])->postJson('/api/v1/operations/queue/walk-ins', $base + [
+        'payment_collection' => [
+            'collected' => true,
+            'amount' => 100,
+            'advance_amount' => 100,
+            'payment_method_reference_id' => $cash->id,
+            'allocations' => [],
+        ],
+    ])->assertCreated();
 });

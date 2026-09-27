@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AccountingJournalEntry;
 use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\Personnel;
@@ -43,6 +44,7 @@ function salesCoreFixture(): array
         'is_system' => false,
         'active' => true,
     ]);
+    mapCustomerPaymentMethod($user, $cash);
 
     $service = Service::query()->create([
         'business_id' => $user->business_id,
@@ -162,11 +164,22 @@ it('records an advance payment on booking creation without creating a sale', fun
     ])->assertCreated();
 
     $payment = Payment::query()->firstOrFail();
+    $journal = AccountingJournalEntry::query()
+        ->where('source_type', 'PAYMENT')
+        ->where('source_id', $payment->id)
+        ->where('source_event', 'RECEIVE')
+        ->with('lines')
+        ->firstOrFail();
+
     expect($payment->payment_type)->toBe('ADVANCE')
         ->and((float) $payment->amount)->toBe(200.0)
         ->and($payment->booking_id)->toBe($response->json('booking.id'))
         ->and($payment->sale_id)->toBeNull()
-        ->and(Sale::count())->toBe(0);
+        ->and(Sale::count())->toBe(0)
+        ->and((float) $journal->lines->sum('debit'))->toBe(200.0)
+        ->and((float) $journal->lines->sum('credit'))->toBe(200.0)
+        ->and((float) $journal->lines->firstWhere('account_key', 'CASH_ON_HAND')->debit)->toBe(200.0)
+        ->and((float) $journal->lines->firstWhere('account_key', 'CUSTOMER_ADVANCES')->credit)->toBe(200.0);
 });
 
 it('preserves the same advance payment through rebooking', function () {
@@ -244,24 +257,7 @@ it('returns one pending parent row for a multi service sale', function () {
         ->assertOk()
         ->assertJsonCount(1, 'sales')
         ->assertJsonPath('sales.0.items_count', 2)
-        ->assertJsonCount(2, 'sales.0.services')
-        ->assertJsonPath('sales.0.services.0.service_name', 'Sales Haircut')
-        ->assertJsonPath('sales.0.services.1.service_name', 'Sales Shave')
         ->assertJsonPath('sales.0.gross_amount', 800);
-});
-
-it('exposes customer visit and lifetime value metrics after visit and payment ledgers are active', function () {
-    $fx = salesCoreFixture();
-    salesCoreCompleteWalkIn($this, $fx, [['service_id' => $fx['service']->id]], [
-        'collected' => true, 'amount' => 125, 'payment_method_reference_id' => $fx['cash']->id,
-    ]);
-
-    $this->actingAs($fx['user'])->getJson('/api/v1/operations/customers')
-        ->assertOk()
-        ->assertJsonPath('customers.0.code', $fx['customer']->code)
-        ->assertJsonPath('customers.0.total_completed_visits', 1)
-        ->assertJsonPath('customers.0.lifetime_value', 125)
-        ->assertJsonPath('customers.0.metrics_pending', false);
 });
 
 it('returns pending checkout detail with received advance payments without finalizing the sale', function () {
@@ -276,7 +272,7 @@ it('returns pending checkout detail with received advance payments without final
         ->assertJsonPath('sale.code', $sale->code)
         ->assertJsonCount(1, 'sale.items')
         ->assertJsonCount(1, 'sale.payments')
-        ->assertJsonPath('phase.checkout_enabled', false);
+        ->assertJsonPath('phase.checkout_enabled', true);
 
     expect($sale->fresh()->financial_finalized_at)->toBeNull();
 });

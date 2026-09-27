@@ -15,7 +15,14 @@ class DatabaseSeeder extends Seeder
             FoundationSeeder::class,
             MasterDataSeeder::class,
             OperationsPermissionSeeder::class,
+            AttendancePermissionSeeder::class,
+            HrLeaveSeeder::class,
+            PayrollPermissionSeeder::class,
+            HrCompletionPermissionSeeder::class,
+            RetailPosPermissionSeeder::class,
+            ProductMasterReferenceSeeder::class,
             InitialSuperAdminSeeder::class,
+            DownloadPermissionSeeder::class,
         ]);
     }
 }

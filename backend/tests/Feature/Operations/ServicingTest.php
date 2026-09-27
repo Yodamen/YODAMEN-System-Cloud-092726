@@ -1,13 +1,21 @@
 <?php
 
 use App\Models\Booking;
+use App\Models\InventoryMovement;
+use App\Models\InventoryStock;
+use App\Models\RetailProduct;
+use App\Models\ServiceConsumption;
+use App\Models\ServiceConsumptionRecipe;
 use App\Models\Customer;
 use App\Models\Personnel;
+use App\Models\PackageEnrollment;
 use App\Models\QueueEntry;
 use App\Models\ReferenceGroup;
 use App\Models\Role;
 use App\Models\Service;
 use App\Models\ServiceCompletionEvent;
+use App\Models\ServiceCredit;
+use App\Models\Sale;
 use App\Models\Visit;
 use Database\Seeders\FoundationSeeder;
 use Database\Seeders\MasterDataSeeder;
@@ -93,6 +101,38 @@ function servicingFixture(): array
     ]);
 
     return compact('user', 'service', 'service2', 'personnel', 'personnel2', 'customer');
+}
+
+function servicingRetailProduct(array $fx, string $name, string $sku, float $sellingPrice, float $onHand = 20): RetailProduct
+{
+    $product = RetailProduct::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'sku' => $sku,
+        'name' => $name,
+        'category' => 'Retail',
+        'unit' => 'pc',
+        'purchase_uom' => 'pc',
+        'purchase_to_basic_factor' => 1,
+        'stock_type' => 'INVENTORY',
+        'retail_available' => true,
+        'unit_cost' => 50,
+        'selling_price' => $sellingPrice,
+        'reorder_point' => 2,
+        'commission_eligible' => true,
+        'status' => 'ACTIVE',
+        'created_by' => $fx['user']->id,
+        'updated_by' => $fx['user']->id,
+    ]);
+
+    InventoryStock::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'branch_id' => $fx['user']->default_branch_id,
+        'retail_product_id' => $product->id,
+        'on_hand' => $onHand,
+        'reserved' => 0,
+    ]);
+
+    return $product;
 }
 
 function createStartedVisit($test, array $fx, bool $twoServices = false): Visit
@@ -231,6 +271,90 @@ it('allows staff reassignment before completion and freezes assignment after com
     ])->assertStatus(422);
 });
 
+it('lets completion update assigned staff and retail purchases before the visit is finalized', function () {
+    $fx = servicingFixture();
+    $visit = createStartedVisit($this, $fx)->fresh('serviceLines');
+    $line = $visit->serviceLines->first();
+    $product = servicingRetailProduct($fx, 'Styling Wax', 'SKU-SERVICING-WAX-001', 175);
+
+    $this->actingAs($fx['user'])->postJson("/api/v1/operations/visit-services/{$line->id}/complete", [
+        'assigned_personnel_id' => $fx['personnel2']->id,
+        'service_credit_id' => null,
+        'retail_items' => [[
+            'retail_product_id' => $product->id,
+            'item_name' => 'Styling Wax',
+            'quantity' => 2,
+            'unit_price' => 175,
+            'notes' => 'Added during completion',
+            'assigned_personnel_id' => $fx['personnel2']->id,
+        ]],
+    ])->assertOk()
+        ->assertJsonPath('visit.status', 'COMPLETED')
+        ->assertJsonPath('visit.services.0.assigned_personnel_id', $fx['personnel2']->id)
+        ->assertJsonPath('visit.retail_items.0.item_name', 'Styling Wax')
+        ->assertJsonPath('visit.retail_items.0.quantity', 2);
+
+    $event = ServiceCompletionEvent::query()->where('visit_service_line_id', $line->id)->firstOrFail();
+    $sale = Sale::query()->where('visit_id', $visit->id)->firstOrFail()->fresh('items');
+
+    expect($line->fresh()->assigned_personnel_id)->toBe($fx['personnel2']->id)
+        ->and($event->assigned_personnel_id)->toBe($fx['personnel2']->id)
+        ->and($visit->retailLines()->count())->toBe(1)
+        ->and($sale->items->where('item_type', 'PRODUCT')->first()->item_name_snapshot)->toBe('Styling Wax')
+        ->and((float) $sale->items->where('item_type', 'PRODUCT')->first()->line_total)->toBe(350.0);
+});
+
+it('lets a regular service claim an available Service Credit during completion', function () {
+    $fx = servicingFixture();
+    $visit = createStartedVisit($this, $fx)->fresh('serviceLines');
+    $line = $visit->serviceLines->first();
+
+    $enrollment = PackageEnrollment::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'code' => 'PKE-COMPLETE-001',
+        'customer_id' => $fx['customer']->id,
+        'service_id' => $fx['service']->id,
+        'service_name_snapshot' => $fx['service']->name,
+        'total_sessions' => 3,
+        'package_price_snapshot' => 900,
+        'status' => 'ACTIVE',
+        'sessions_completed_before_activation' => 0,
+        'activated_at' => now(),
+    ]);
+
+    $credit = ServiceCredit::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'code' => 'SCR-COMPLETE-001',
+        'package_enrollment_id' => $enrollment->id,
+        'customer_id' => $fx['customer']->id,
+        'service_id' => $fx['service']->id,
+        'service_name_snapshot' => $fx['service']->name,
+        'sessions_purchased' => 3,
+        'sessions_used' => 0,
+        'sessions_remaining' => 3,
+        'status' => 'ACTIVE',
+    ]);
+
+    $this->actingAs($fx['user'])->postJson("/api/v1/operations/visit-services/{$line->id}/complete", [
+        'assigned_personnel_id' => $fx['personnel']->id,
+        'service_credit_id' => $credit->id,
+        'retail_items' => [],
+    ])->assertOk()
+        ->assertJsonPath('visit.services.0.source_type', 'SERVICE_CREDIT')
+        ->assertJsonPath('visit.services.0.service_credit_id', $credit->id)
+        ->assertJsonPath('visit.status', 'COMPLETED');
+
+    $credit->refresh();
+    $sale = Sale::query()->where('visit_id', $visit->id)->firstOrFail()->fresh('items');
+    $serviceItem = $sale->items->firstWhere('visit_service_line_id', $line->id);
+
+    expect($line->fresh()->service_credit_id)->toBe($credit->id)
+        ->and($credit->sessions_used)->toBe(1)
+        ->and($credit->sessions_remaining)->toBe(2)
+        ->and($serviceItem->item_type)->toBe('SERVICE_CREDIT_USE')
+        ->and((float) $serviceItem->line_total)->toBe(0.0);
+});
+
 it('can add a new service to an active visit without changing historical queue snapshots', function () {
     $fx = servicingFixture();
     $visit = createStartedVisit($this, $fx);
@@ -246,6 +370,125 @@ it('can add a new service to an active visit without changing historical queue s
         ->and($visit->queueEntry->serviceLines()->count())->toBe($queueServiceCount);
 });
 
+it('lets Manage claim a Service Credit with assigned staff before service completion', function () {
+    $fx = servicingFixture();
+    $visit = createStartedVisit($this, $fx)->fresh('serviceLines');
+
+    $enrollment = PackageEnrollment::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'code' => 'PKE-MANAGE-001',
+        'customer_id' => $fx['customer']->id,
+        'service_id' => $fx['service2']->id,
+        'service_name_snapshot' => $fx['service2']->name,
+        'total_sessions' => 3,
+        'package_price_snapshot' => 900,
+        'status' => 'ACTIVE',
+        'sessions_completed_before_activation' => 0,
+        'activated_at' => now(),
+    ]);
+
+    $credit = ServiceCredit::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'code' => 'SCR-MANAGE-001',
+        'package_enrollment_id' => $enrollment->id,
+        'customer_id' => $fx['customer']->id,
+        'service_id' => $fx['service2']->id,
+        'service_name_snapshot' => $fx['service2']->name,
+        'sessions_purchased' => 3,
+        'sessions_used' => 0,
+        'sessions_remaining' => 3,
+        'status' => 'ACTIVE',
+    ]);
+
+    $response = $this->actingAs($fx['user'])->postJson("/api/v1/operations/servicing/{$visit->id}/services", [
+        'service_id' => $fx['service2']->id,
+        'service_credit_id' => $credit->id,
+        'quantity' => 1,
+        'assigned_personnel_id' => $fx['personnel2']->id,
+    ])->assertOk()->assertJsonCount(2, 'visit.services');
+
+    $creditLine = collect($response->json('visit.services'))->firstWhere('service_credit_id', $credit->id);
+
+    expect($creditLine)->not->toBeNull()
+        ->and($creditLine['source_type'])->toBe('SERVICE_CREDIT')
+        ->and($creditLine['assigned_personnel_id'])->toBe($fx['personnel2']->id)
+        ->and($credit->fresh()->sessions_remaining)->toBe(3);
+
+    $this->actingAs($fx['user'])
+        ->getJson("/api/v1/operations/customers/{$fx['customer']->id}/service-credits")
+        ->assertOk()
+        ->assertJsonPath('service_credits.0.available_sessions', 2);
+});
+
+it('lets Manage save Product Purchases before any service is completed', function () {
+    $fx = servicingFixture();
+    $visit = createStartedVisit($this, $fx);
+    $product = servicingRetailProduct($fx, 'Pomade', 'SKU-SERVICING-POMADE-001', 220);
+
+    $this->actingAs($fx['user'])->putJson("/api/v1/operations/servicing/{$visit->id}/retail-items", [
+        'retail_items' => [[
+            'retail_product_id' => $product->id,
+            'item_name' => 'Pomade',
+            'quantity' => 2,
+            'unit_price' => 220,
+            'notes' => 'Added from Manage',
+            'assigned_personnel_id' => $fx['personnel']->id,
+        ]],
+    ])->assertOk()
+        ->assertJsonPath('visit.status', 'IN_SERVICE')
+        ->assertJsonPath('visit.retail_items.0.item_name', 'Pomade')
+        ->assertJsonPath('visit.retail_items.0.quantity', 2);
+
+    expect($visit->fresh()->retailLines()->count())->toBe(1)
+        ->and($visit->fresh()->retailLines()->first()->item_name_snapshot)->toBe('Pomade')
+        ->and(Sale::query()->where('visit_id', $visit->id)->exists())->toBeFalse();
+});
+
+it('completes multiple selected services from Manage in one request and keeps the operation atomic', function () {
+    $fx = servicingFixture();
+    $visit = createStartedVisit($this, $fx, true)->fresh('serviceLines');
+    $serviceIds = $visit->serviceLines->pluck('id')->values()->all();
+    $product = servicingRetailProduct($fx, 'Finishing Wax', 'SKU-SERVICING-FINISH-001', 180);
+
+    $this->actingAs($fx['user'])->postJson("/api/v1/operations/servicing/{$visit->id}/complete-services", [
+        'service_line_ids' => $serviceIds,
+        'retail_items' => [[
+            'retail_product_id' => $product->id,
+            'item_name' => 'Finishing Wax',
+            'quantity' => 1,
+            'unit_price' => 180,
+            'notes' => 'Added before batch completion',
+            'assigned_personnel_id' => $fx['personnel']->id,
+        ]],
+    ])->assertOk()
+        ->assertJsonPath('visit.status', 'COMPLETED')
+        ->assertJsonCount(2, 'visit.services')
+        ->assertJsonPath('visit.retail_items.0.item_name', 'Finishing Wax');
+
+    expect($visit->fresh()->serviceLines()->where('status', 'COMPLETED')->count())->toBe(2)
+        ->and(ServiceCompletionEvent::query()->where('visit_id', $visit->id)->count())->toBe(2)
+        ->and($visit->fresh()->status)->toBe('COMPLETED')
+        ->and($visit->retailLines()->count())->toBe(1);
+});
+
+it('completes only checked services and leaves the visit open when another service is still active', function () {
+    $fx = servicingFixture();
+    $visit = createStartedVisit($this, $fx, true)->fresh('serviceLines');
+    $selected = $visit->serviceLines->first();
+    $remaining = $visit->serviceLines->last();
+
+    $this->actingAs($fx['user'])->postJson("/api/v1/operations/servicing/{$visit->id}/complete-services", [
+        'service_line_ids' => [$selected->id],
+        'retail_items' => [],
+    ])->assertOk()
+        ->assertJsonPath('visit.status', 'IN_SERVICE');
+
+    expect($selected->fresh()->status)->toBe('COMPLETED')
+        ->and($remaining->fresh()->status)->toBe('IN_PROGRESS')
+        ->and($visit->fresh()->status)->toBe('IN_SERVICE')
+        ->and(ServiceCompletionEvent::query()->where('visit_id', $visit->id)->count())->toBe(1);
+});
+
 it('restores servicing view access for legacy manager reception and barber roles without adding action permissions', function () {
     foreach (['ROLE-MGR', 'ROLE-REC', 'ROLE-BAR'] as $roleCode) {
         $role = Role::query()->where('code', $roleCode)->firstOrFail();
@@ -255,4 +498,270 @@ it('restores servicing view access for legacy manager reception and barber roles
 
     $reception = Role::query()->where('code', 'ROLE-REC')->firstOrFail();
     expect($reception->permissions()->pluck('code')->all())->not->toContain('servicing.COMPLETE');
+});
+
+it('supports a retail only visit and carries assigned staff into the product sale item', function () {
+    $fx = servicingFixture();
+
+    $queueResponse = $this->actingAs($fx['user'])->postJson('/api/v1/operations/queue/walk-ins', [
+        'customer_id' => $fx['customer']->id,
+        'customer_type' => 'NEW',
+        'services' => [],
+        'retail_items' => [[
+            'item_name' => 'Retail Styling Clay',
+            'quantity' => 1,
+            'unit_price' => 350,
+            'assigned_personnel_id' => $fx['personnel2']->id,
+            'notes' => 'Retail only purchase',
+        ]],
+    ])->assertCreated()
+        ->assertJsonPath('queue_entry.retail_items.0.assigned_personnel_id', $fx['personnel2']->id);
+
+    $visitResponse = $this->actingAs($fx['user'])
+        ->postJson('/api/v1/operations/queue/'.$queueResponse->json('queue_entry.id').'/start-servicing')
+        ->assertOk()
+        ->assertJsonPath('visit.status', 'IN_SERVICE')
+        ->assertJsonPath('visit.retail_items.0.assigned_personnel_id', $fx['personnel2']->id);
+
+    $visitId = $visitResponse->json('visit.id');
+
+    $this->actingAs($fx['user'])
+        ->postJson('/api/v1/operations/servicing/'.$visitId.'/complete')
+        ->assertOk()
+        ->assertJsonPath('visit.status', 'COMPLETED');
+
+    $sale = Sale::query()->where('visit_id', $visitId)->firstOrFail()->fresh('items');
+    $product = $sale->items->firstWhere('item_type', 'PRODUCT');
+
+    expect($product)->not->toBeNull()
+        ->and($product->assigned_personnel_id)->toBe($fx['personnel2']->id)
+        ->and($product->assigned_personnel_name_snapshot)->toBe($fx['personnel2']->full_name)
+        ->and((float) $product->line_total)->toBe(350.0);
+});
+
+
+it('automatically posts service recipe consumption once when a service is completed', function () {
+    $fx = servicingFixture();
+    $visit = createStartedVisit($this, $fx)->fresh('serviceLines');
+    $line = $visit->serviceLines->first();
+
+    $product = RetailProduct::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'sku' => 'SKU-CONSUME-001',
+        'name' => 'Scalp Serum Vial',
+        'category' => 'Scalp Care',
+        'brand' => 'Test',
+        'unit' => 'Vial',
+        'purchase_uom' => 'box',
+        'purchase_to_basic_factor' => 10,
+        'purchase_uom_cost' => 180,
+        'basic_uom_cost' => 18,
+        'selling_uom' => 'Vial',
+        'selling_to_basic_factor' => 1,
+        'consumption_uom' => 'ml',
+        'consumption_to_basic_factor' => 8,
+        'retail_available' => false,
+        'stock_type' => 'INVENTORY',
+        'unit_cost' => 18,
+        'selling_price' => 0,
+        'reorder_point' => 2,
+        'commission_eligible' => false,
+        'status' => 'ACTIVE',
+    ]);
+
+    InventoryStock::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'branch_id' => $visit->branch_id,
+        'retail_product_id' => $product->id,
+        'on_hand' => 10,
+        'reserved' => 0,
+    ]);
+
+    $recipe = ServiceConsumptionRecipe::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'service_id' => $fx['service']->id,
+        'status' => 'ACTIVE',
+        'created_by' => $fx['user']->id,
+        'updated_by' => $fx['user']->id,
+    ]);
+    $recipe->lines()->create([
+        'retail_product_id' => $product->id,
+        'quantity_per_service' => 4,
+        'consumption_uom_snapshot' => 'ml',
+        'consumption_to_basic_factor_snapshot' => 8,
+        'basic_quantity_per_service' => 0.5,
+        'basic_uom_snapshot' => 'Vial',
+        'unit_cost_snapshot' => 18,
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($fx['user'])->postJson("/api/v1/operations/visit-services/{$line->id}/complete")->assertOk();
+    $this->actingAs($fx['user'])->postJson("/api/v1/operations/visit-services/{$line->id}/complete")->assertOk();
+
+    $stock = InventoryStock::query()->where('retail_product_id', $product->id)->firstOrFail();
+    $consumption = ServiceConsumption::query()->with('lines')->where('visit_service_line_id', $line->id)->firstOrFail();
+    $movement = InventoryMovement::query()->where('retail_product_id', $product->id)->where('movement_type', 'SERVICE_CONSUMPTION')->firstOrFail();
+
+    expect((float) $stock->on_hand)->toBe(9.5)
+        ->and(ServiceConsumption::query()->where('visit_service_line_id', $line->id)->count())->toBe(1)
+        ->and((float) $consumption->total_cost)->toBe(9.0)
+        ->and((float) $consumption->lines->first()->consumption_quantity)->toBe(4.0)
+        ->and((float) $consumption->lines->first()->basic_quantity)->toBe(0.5)
+        ->and((float) $movement->quantity_change)->toBe(-0.5)
+        ->and((float) $movement->quantity_before)->toBe(10.0)
+        ->and((float) $movement->quantity_after)->toBe(9.5);
+});
+
+it('consumes one proportional recipe share when a multi-session package session is completed', function () {
+    $fx = servicingFixture();
+    $groups = ReferenceGroup::query()->with('values')->get()->keyBy('code');
+    $fx['service']->update([
+        'service_count_reference_id' => $groups['SERVICE_COUNT']->values->firstWhere('code', 'MULTI_SESSION')->id,
+        'number_of_sessions' => 6,
+    ]);
+
+    $visit = createStartedVisit($this, $fx)->fresh('serviceLines');
+    $line = $visit->serviceLines->first();
+
+    // Package entitlement may carry the package count on legacy lines, but one
+    // completion is still one rendered session. The saved recipe below is the
+    // TOTAL material allocation for all 6 sessions.
+    $line->update([
+        'source_type' => 'NEW_PACKAGE',
+        'quantity' => 6,
+    ]);
+
+    $product = RetailProduct::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'sku' => 'SKU-PACKAGE-CONSUME-001',
+        'name' => 'Package Session Serum',
+        'category' => 'Scalp Care',
+        'brand' => 'Test',
+        'unit' => 'Vial',
+        'purchase_uom' => 'box',
+        'purchase_to_basic_factor' => 10,
+        'purchase_uom_cost' => 180,
+        'basic_uom_cost' => 18,
+        'selling_uom' => 'Vial',
+        'selling_to_basic_factor' => 1,
+        'consumption_uom' => 'ml',
+        'consumption_to_basic_factor' => 8,
+        'retail_available' => false,
+        'stock_type' => 'INVENTORY',
+        'unit_cost' => 18,
+        'selling_price' => 0,
+        'reorder_point' => 2,
+        'commission_eligible' => false,
+        'status' => 'ACTIVE',
+    ]);
+
+    InventoryStock::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'branch_id' => $visit->branch_id,
+        'retail_product_id' => $product->id,
+        'on_hand' => 10,
+        'reserved' => 0,
+    ]);
+
+    $recipe = ServiceConsumptionRecipe::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'service_id' => $fx['service']->id,
+        'status' => 'ACTIVE',
+        'created_by' => $fx['user']->id,
+        'updated_by' => $fx['user']->id,
+    ]);
+    $recipe->lines()->create([
+        'retail_product_id' => $product->id,
+        'quantity_per_service' => 24, // 24 ml TOTAL for the full 6-session package
+        'consumption_uom_snapshot' => 'ml',
+        'consumption_to_basic_factor_snapshot' => 8,
+        'basic_quantity_per_service' => 3,
+        'basic_uom_snapshot' => 'Vial',
+        'unit_cost_snapshot' => 18,
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($fx['user'])
+        ->postJson("/api/v1/operations/visit-services/{$line->id}/complete")
+        ->assertOk();
+
+    $consumption = ServiceConsumption::query()
+        ->with('lines')
+        ->where('visit_service_line_id', $line->id)
+        ->firstOrFail();
+
+    // 24 ml total / 6 sessions = 4 ml consumed for this one completed session.
+    expect((float) $consumption->service_quantity)->toBe(1.0)
+        ->and((float) $consumption->lines->first()->consumption_quantity)->toBe(4.0)
+        ->and((float) $consumption->lines->first()->basic_quantity)->toBe(0.5)
+        ->and((float) $consumption->total_cost)->toBe(9.0)
+        ->and((float) InventoryStock::query()->where('retail_product_id', $product->id)->value('on_hand'))->toBe(9.5);
+});
+
+it('allows service completion to post negative stock when recipe materials are insufficient', function () {
+    $fx = servicingFixture();
+    $visit = createStartedVisit($this, $fx)->fresh('serviceLines');
+    $line = $visit->serviceLines->first();
+
+    $product = RetailProduct::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'sku' => 'SKU-CONSUME-002',
+        'name' => 'Low Stock Serum',
+        'unit' => 'Vial',
+        'purchase_uom' => 'Vial',
+        'purchase_to_basic_factor' => 1,
+        'purchase_uom_cost' => 18,
+        'basic_uom_cost' => 18,
+        'selling_uom' => 'Vial',
+        'selling_to_basic_factor' => 1,
+        'consumption_uom' => 'ml',
+        'consumption_to_basic_factor' => 8,
+        'retail_available' => false,
+        'stock_type' => 'INVENTORY',
+        'unit_cost' => 18,
+        'selling_price' => 0,
+        'reorder_point' => 0,
+        'commission_eligible' => false,
+        'status' => 'ACTIVE',
+    ]);
+    InventoryStock::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'branch_id' => $visit->branch_id,
+        'retail_product_id' => $product->id,
+        'on_hand' => 0.25,
+        'reserved' => 0,
+    ]);
+    $recipe = ServiceConsumptionRecipe::query()->create([
+        'business_id' => $fx['user']->business_id,
+        'service_id' => $fx['service']->id,
+        'status' => 'ACTIVE',
+        'created_by' => $fx['user']->id,
+        'updated_by' => $fx['user']->id,
+    ]);
+    $recipe->lines()->create([
+        'retail_product_id' => $product->id,
+        'quantity_per_service' => 4,
+        'consumption_uom_snapshot' => 'ml',
+        'consumption_to_basic_factor_snapshot' => 8,
+        'basic_quantity_per_service' => 0.5,
+        'basic_uom_snapshot' => 'Vial',
+        'unit_cost_snapshot' => 18,
+        'sort_order' => 1,
+    ]);
+
+    $this->actingAs($fx['user'])
+        ->postJson("/api/v1/operations/visit-services/{$line->id}/complete")
+        ->assertOk();
+
+    $consumption = ServiceConsumption::query()->with('lines')->where('visit_service_line_id', $line->id)->firstOrFail();
+    $movement = InventoryMovement::query()->where('retail_product_id', $product->id)->where('movement_type', 'SERVICE_CONSUMPTION')->firstOrFail();
+
+    expect($line->fresh()->status)->toBe('COMPLETED')
+        ->and((float) InventoryStock::query()->where('retail_product_id', $product->id)->value('on_hand'))->toBe(-0.25)
+        ->and(ServiceCompletionEvent::query()->where('visit_service_line_id', $line->id)->count())->toBe(1)
+        ->and(ServiceConsumption::query()->where('visit_service_line_id', $line->id)->count())->toBe(1)
+        ->and((float) $consumption->lines->first()->quantity_before)->toBe(0.25)
+        ->and((float) $consumption->lines->first()->quantity_after)->toBe(-0.25)
+        ->and((float) $movement->quantity_change)->toBe(-0.5)
+        ->and((float) $movement->quantity_after)->toBe(-0.25);
 });

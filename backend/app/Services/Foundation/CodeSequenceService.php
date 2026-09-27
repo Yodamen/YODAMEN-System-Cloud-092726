@@ -4,6 +4,7 @@ namespace App\Services\Foundation;
 
 use App\Models\CodeSequence;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class CodeSequenceService
 {
@@ -41,5 +42,31 @@ class CodeSequenceService
 
             return $prefix.str_pad((string) $number, $padLength, '0', STR_PAD_LEFT);
         });
+    }
+
+    /**
+     * Return the next sequence code that is not already taken.
+     *
+     * This is intentionally separate from next() so callers with an external
+     * unique constraint can recover safely when a transactional sequence was
+     * reset while historical rows were retained.
+     */
+    public function nextAvailable(
+        string $sequenceKey,
+        string $prefix,
+        callable $isTaken,
+        int $padLength = 4,
+        ?int $businessId = null,
+        int $maxAttempts = 100,
+    ): string {
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            $candidate = $this->next($sequenceKey, $prefix, $padLength, $businessId);
+
+            if (! $isTaken($candidate)) {
+                return $candidate;
+            }
+        }
+
+        throw new RuntimeException('Unable to allocate a unique code after '.$maxAttempts.' attempts.');
     }
 }

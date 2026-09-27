@@ -1,0 +1,628 @@
+.attendance-page .metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.attendance-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.attendance-filter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: end;
+}
+
+.attendance-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.attendance-proof-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #fafafa;
+}
+
+.attendance-proof-card header {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.attendance-proof-card img {
+  display: block;
+  width: 100%;
+  min-height: 220px;
+  max-height: 440px;
+  object-fit: contain;
+  background: #111;
+}
+
+.attendance-proof-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.attendance-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.my-attendance-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
+  gap: 14px;
+}
+
+.my-attendance-clock-card,
+.my-attendance-action-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  background: #fff;
+}
+
+.my-attendance-clock-card span,
+.my-attendance-clock-card strong,
+.my-attendance-clock-card small {
+  display: block;
+}
+
+.my-attendance-clock-card span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.my-attendance-clock-card strong {
+  margin-top: 7px;
+  font-size: 1.45rem;
+}
+
+.my-attendance-clock-card small {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.my-attendance-action-card {
+  display: grid;
+  gap: 12px;
+}
+
+.attendance-file-box {
+  display: grid;
+  gap: 7px;
+  border: 1px dashed #c7c7cc;
+  border-radius: 9px;
+  padding: 12px;
+  background: #fafafa;
+}
+
+.attendance-file-box input {
+  width: 100%;
+  font-size: 0.72rem;
+}
+
+.attendance-file-box small {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.attendance-time-cell {
+  white-space: nowrap;
+}
+
+@media (max-width: 1000px) {
+  .attendance-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .my-attendance-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .attendance-page .metric-grid,
+  .attendance-filter-grid,
+  .attendance-proof-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.attendance-heading-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.schedule-week-grid { display:grid; gap:8px; }
+.schedule-day-row { display:grid; grid-template-columns: 140px 110px 130px 120px 120px; gap:10px; align-items:end; padding:10px 0; border-bottom:1px solid var(--border); }
+.schedule-override-list { display:grid; gap:8px; }
+.schedule-override-row { display:grid; grid-template-columns: 150px 130px 120px minmax(180px,1fr) auto; gap:8px; align-items:center; }
+.schedule-override-row input, .schedule-override-row select { min-height:40px; border:1px solid var(--border); border-radius:8px; padding:8px 10px; background:#fff; }
+.compact-empty { min-height:80px; }
+.attendance-calendar-card { display:grid; gap:14px; }
+.calendar-toolbar { display:flex; justify-content:center; align-items:center; gap:14px; }
+.calendar-toolbar strong { min-width:160px; text-align:center; }
+.calendar-legend { display:flex; gap:14px; flex-wrap:wrap; font-size:.78rem; color:var(--muted); }
+.calendar-legend span { display:flex; align-items:center; gap:6px; }
+.legend-dot { width:12px; height:12px; border-radius:3px; display:inline-block; }
+.legend-dot.present { background:#f4d35e; }
+.legend-dot.absent { background:#ef6b6b; }
+.legend-dot.day-off { background:#6aa9e9; }
+.legend-dot.partial { background:#f2a65a; }
+.attendance-info { border:1px solid #c9d8ef; background:#f2f7fd; color:#325a88; }
+.attendance-calendar-weekdays, .attendance-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; }
+.attendance-calendar-weekdays span { text-align:center; font-size:.72rem; font-weight:800; color:var(--muted); padding:4px; }
+.attendance-calendar-day { min-height:90px; border:1px solid var(--border); border-radius:10px; background:#fff; padding:9px; text-align:left; display:flex; flex-direction:column; justify-content:space-between; color:var(--text); }
+.attendance-calendar-day.blank { border:none; background:transparent; }
+.attendance-calendar-day.present { background:#fff6c8; border-color:#e5ca55; }
+.attendance-calendar-day.absent { background:#fde3e3; border-color:#e58c8c; }
+.attendance-calendar-day.day-off { background:#e2f0ff; border-color:#8bbce8; }
+.attendance-calendar-day.not-full-day { background:#ffead5; border-color:#efb06e; }
+.attendance-calendar-day.working, .attendance-calendar-day.pending-approval { background:#f3f4f6; }
+.attendance-calendar-day.today { border:2px solid var(--gold); }
+.calendar-date-number { font-weight:900; font-size:1rem; }
+.attendance-calendar-day small { font-size:.62rem; text-transform:capitalize; color:#555; }
+.calendar-day-detail { display:grid; grid-template-columns:1.1fr repeat(3,minmax(0,1fr)); gap:10px; border-top:1px solid var(--border); padding-top:14px; }
+.calendar-day-detail > div { display:grid; gap:4px; }
+.calendar-day-detail span { font-size:.68rem; color:var(--muted); }
+.calendar-day-detail strong { font-size:.82rem; }
+@media (max-width:900px) { .schedule-day-row { grid-template-columns:1fr 1fr; } .schedule-override-row { grid-template-columns:1fr 1fr; } .calendar-day-detail { grid-template-columns:1fr 1fr; } }
+@media (max-width:680px) { .attendance-calendar-day { min-height:70px; padding:6px; } .attendance-calendar-day small { display:none; } .schedule-day-row, .schedule-override-row, .calendar-day-detail { grid-template-columns:1fr; } }
+
+/* Update 57: compact My Attendance + integrated self-service tabs */
+.my-attendance-tabs {
+  width: fit-content;
+}
+
+.my-attendance-status-card {
+  display: grid;
+  gap: 14px;
+}
+
+.my-attendance-status-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.my-attendance-status-topline > div:first-child {
+  display: grid;
+  gap: 7px;
+}
+
+.my-attendance-status-topline > div:first-child strong {
+  font-size: .86rem;
+}
+
+.my-attendance-server-time {
+  display: grid;
+  gap: 4px;
+  text-align: right;
+}
+
+.my-attendance-server-time span,
+.my-attendance-today-details span {
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.my-attendance-server-time strong {
+  font-size: .85rem;
+}
+
+.my-attendance-today-details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.my-attendance-today-details > div {
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+  border-right: 1px solid var(--border);
+}
+
+.my-attendance-today-details > div:last-child {
+  border-right: 0;
+}
+
+.my-attendance-today-details strong {
+  font-size: .9rem;
+}
+
+.my-attendance-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.attendance-file-box.compact {
+  padding: 10px 12px;
+}
+
+.my-attendance-filter-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.attendance-view-field .segmented-control {
+  width: fit-content;
+}
+
+.my-leave-embedded {
+  gap: 12px;
+}
+
+@media (max-width: 760px) {
+  .my-attendance-status-topline {
+    display: grid;
+  }
+
+  .my-attendance-server-time {
+    text-align: left;
+  }
+
+  .my-attendance-today-details {
+    grid-template-columns: 1fr;
+  }
+
+  .my-attendance-today-details > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .my-attendance-today-details > div:last-child {
+    border-bottom: 0;
+  }
+
+  .my-attendance-action-row,
+  .my-attendance-filter-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Update 72: streamlined staff attendance and work schedule */
+.my-attendance-status-topline {
+  align-items: center;
+}
+
+.my-attendance-current-time {
+  margin-left: auto;
+  font-size: .86rem;
+  text-align: right;
+}
+
+.my-attendance-session-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, .85fr);
+  gap: 14px;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.my-attendance-session-row .my-attendance-today-details {
+  border: 0;
+}
+
+.my-attendance-session-row .my-attendance-today-details > div {
+  padding: 8px 12px;
+}
+
+.my-attendance-proof-action {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
+}
+
+.attendance-proof-picker {
+  display: grid;
+  gap: 5px;
+}
+
+.attendance-proof-picker > span {
+  font-size: .68rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.attendance-proof-picker input {
+  width: 100%;
+  min-height: 38px;
+}
+
+.attendance-proof-picker small {
+  color: var(--muted);
+  font-size: .64rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.my-attendance-proof-action .primary-button {
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+.my-attendance-filterbar {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+
+.my-attendance-filter-fields {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.my-attendance-filter-fields .form-field {
+  width: 220px;
+}
+
+.my-attendance-apply {
+  min-height: 40px;
+  padding: 0 18px;
+  margin-bottom: 0;
+}
+
+.my-attendance-view-toggle {
+  margin-left: auto;
+  min-height: 40px;
+  align-self: end;
+}
+
+.my-attendance-view-toggle button {
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+.streamlined-work-schedule {
+  gap: 16px;
+}
+
+.schedule-section {
+  display: grid;
+  gap: 10px;
+}
+
+.schedule-section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.schedule-section-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.schedule-section-heading > div > span {
+  color: var(--muted);
+  font-size: .7rem;
+}
+
+.schedule-week-table {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.schedule-week-header,
+.schedule-week-row {
+  display: grid;
+  grid-template-columns: 130px 130px 140px minmax(260px, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 9px 12px;
+}
+
+.schedule-week-header {
+  background: #fafafa;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.schedule-week-row {
+  border-bottom: 1px solid var(--border);
+}
+
+.schedule-week-row:last-child {
+  border-bottom: 0;
+}
+
+.schedule-week-row.is-day-off {
+  background: #fafafa;
+}
+
+.schedule-workday-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: .74rem;
+  font-weight: 700;
+}
+
+.schedule-workday-toggle input {
+  width: 16px;
+  height: 16px;
+}
+
+.schedule-hours-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.schedule-hours-field input {
+  width: 86px;
+  min-height: 38px;
+}
+
+.schedule-hours-field span {
+  color: var(--muted);
+  font-size: .7rem;
+}
+
+.schedule-shift-fields {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 7px;
+  align-items: center;
+}
+
+.schedule-shift-fields input {
+  min-width: 0;
+  min-height: 38px;
+}
+
+.schedule-shift-fields span {
+  color: var(--muted);
+  font-size: .7rem;
+}
+
+.streamlined-overrides .schedule-override-row {
+  grid-template-columns: 145px 120px 110px minmax(180px, 1fr) auto;
+}
+
+.schedule-generated-list {
+  display: grid;
+  gap: 6px;
+}
+
+.schedule-generated-row {
+  display: grid;
+  grid-template-columns: 150px 110px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid #d9e4f2;
+  background: #f7faff;
+  border-radius: 8px;
+  font-size: .72rem;
+}
+
+@media (max-width: 900px) {
+  .my-attendance-session-row {
+    grid-template-columns: 1fr;
+  }
+
+  .my-attendance-proof-action {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: 12px;
+  }
+
+  .my-attendance-filterbar {
+    flex-wrap: wrap;
+  }
+
+  .my-attendance-view-toggle {
+    margin-left: 0;
+  }
+
+  .schedule-week-header,
+  .schedule-week-row {
+    grid-template-columns: 110px 120px 120px 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .my-attendance-status-topline {
+    display: flex;
+  }
+
+  .my-attendance-current-time {
+    text-align: right;
+  }
+
+  .my-attendance-session-row .my-attendance-today-details {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .my-attendance-session-row .my-attendance-today-details > div {
+    border-right: 1px solid var(--border);
+    border-bottom: 0;
+  }
+
+  .my-attendance-session-row .my-attendance-today-details > div:last-child {
+    border-right: 0;
+  }
+
+  .my-attendance-proof-action {
+    grid-template-columns: 1fr;
+  }
+
+  .my-attendance-filter-fields {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .my-attendance-filter-fields .form-field {
+    width: calc(50% - 5px);
+  }
+
+  .my-attendance-view-toggle {
+    margin-left: auto;
+  }
+
+  .schedule-week-header {
+    display: none;
+  }
+
+  .schedule-week-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .schedule-shift-fields {
+    grid-column: 1 / -1;
+  }
+
+  .streamlined-overrides .schedule-override-row,
+  .schedule-generated-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Update 73: sleek attendance controls */
+.my-attendance-proof-action .primary-button,
+.my-attendance-apply,
+.my-attendance-reset,
+.my-attendance-view-toggle,
+.my-attendance-view-toggle button {
+  min-height: 35px !important;
+  height: 35px !important;
+}
+.my-attendance-proof-action .primary-button,
+.my-attendance-apply,
+.my-attendance-reset,
+.my-attendance-view-toggle button {
+  padding: 0 13px !important;
+}
+.my-attendance-filter-fields { gap: 8px; }
+.my-attendance-view-toggle { align-self: end; }

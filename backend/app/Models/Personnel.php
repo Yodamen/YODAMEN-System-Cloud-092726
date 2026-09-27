@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Personnel extends Model
 {
@@ -32,8 +33,16 @@ class Personnel extends Model
         'ot_multiplier',
         'compensation_rule_reference_id',
         'guaranteed_daily_pay',
+        'compensation_effective_from',
         'can_perform_services',
         'commission_eligible',
+        'paid_leave_entitled',
+        'sss_enabled',
+        'sss_number',
+        'philhealth_enabled',
+        'philhealth_number',
+        'pagibig_enabled',
+        'pagibig_number',
         'hire_date',
         'linked_user_id',
         'status',
@@ -53,8 +62,13 @@ class Personnel extends Model
             'ot_entitled' => 'boolean',
             'ot_multiplier' => 'decimal:3',
             'guaranteed_daily_pay' => 'decimal:2',
+            'compensation_effective_from' => 'immutable_date',
             'can_perform_services' => 'boolean',
             'commission_eligible' => 'boolean',
+            'paid_leave_entitled' => 'boolean',
+            'sss_enabled' => 'boolean',
+            'philhealth_enabled' => 'boolean',
+            'pagibig_enabled' => 'boolean',
             'hire_date' => 'immutable_date',
         ];
     }
@@ -92,6 +106,21 @@ class Personnel extends Model
     public function linkedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'linked_user_id');
+    }
+
+    public function compensationTerms(): HasMany
+    {
+        return $this->hasMany(PersonnelCompensationTerm::class);
+    }
+
+    public function workSchedules(): HasMany
+    {
+        return $this->hasMany(PersonnelWorkSchedule::class);
+    }
+
+    public function scheduleOverrides(): HasMany
+    {
+        return $this->hasMany(PersonnelScheduleOverride::class);
     }
 
     public function getFullNameAttribute(): string

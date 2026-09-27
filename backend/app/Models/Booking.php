@@ -88,6 +88,11 @@ class Booking extends Model
         return $this->hasOne(Sale::class);
     }
 
+    public function packageEnrollments(): HasMany
+    {
+        return $this->hasMany(PackageEnrollment::class);
+    }
+
     public function canCheckIn(): bool
     {
         return strtoupper((string) $this->status) === 'BOOKED'

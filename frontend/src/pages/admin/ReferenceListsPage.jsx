@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import SearchableSelect from '../../components/common/SearchableSelect'
+import { useCallback, useEffect, useState } from 'react'
 import { api, getApiErrorMessage } from '../../api/client'
 import ActionMenu from '../../components/common/ActionMenu'
 import Modal from '../../components/common/Modal'
@@ -11,6 +12,7 @@ const emptyForm = {
   display_value: '',
   sort_order: 0,
   is_system: false,
+  metadata: { contexts: [] },
 }
 
 export default function ReferenceListsPage() {
@@ -22,6 +24,7 @@ export default function ReferenceListsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
+  const [workflowContexts, setWorkflowContexts] = useState([])
 
   const loadCategories = useCallback(async () => {
     const response = await api.get('/v1/admin/references/categories')
@@ -44,7 +47,7 @@ export default function ReferenceListsPage() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      Promise.all([loadCategories()])
+      Promise.all([loadCategories(), api.get('/v1/workflow-reasons/contexts').then((response) => setWorkflowContexts(response.data.contexts || []))])
         .catch((error) => setMessage(getApiErrorMessage(error, 'Unable to load reference categories.')))
         .finally(() => setLoading(false))
     }, 0)
@@ -62,14 +65,10 @@ export default function ReferenceListsPage() {
     return () => window.clearTimeout(timer)
   }, [loadReferences, selectedGroup])
 
-  const selectedCategory = useMemo(
-    () => categories.find((category) => category.code === selectedGroup),
-    [categories, selectedGroup],
-  )
 
   function openCreate() {
     setMessage('')
-    setForm({ ...emptyForm, group_code: selectedGroup })
+    setForm({ ...emptyForm, group_code: selectedGroup, metadata: { contexts: [] } })
   }
 
   function openEdit(record) {
@@ -81,6 +80,7 @@ export default function ReferenceListsPage() {
       display_value: record.display_value,
       sort_order: record.sort_order,
       is_system: record.is_system,
+      metadata: { contexts: [...(record.metadata?.contexts || [])] },
     })
   }
 
@@ -95,6 +95,7 @@ export default function ReferenceListsPage() {
         code: form.code.trim().toUpperCase(),
         display_value: form.display_value.trim(),
         sort_order: Number(form.sort_order || 0),
+        metadata: form.group_code === 'WORKFLOW_REASON' ? { contexts: form.metadata?.contexts || [] } : undefined,
       }
 
       if (form.id) {
@@ -137,19 +138,15 @@ export default function ReferenceListsPage() {
       {message ? <div className="form-alert error">{message}</div> : null}
 
       <section className="content-card">
-        <div className="toolbar-row">
-          <label className="form-field compact-field">
-            Reference Category
-            <select value={selectedGroup} onChange={(event) => setSelectedGroup(event.target.value)}>
+        <div className="reference-list-toolbar">
+          <label className="form-field reference-category-field">
+            <span>Reference Category</span>
+            <SearchableSelect aria-label="Reference list" value={selectedGroup} onChange={(event) => setSelectedGroup(event.target.value)}>
               {categories.map((category) => (
                 <option key={category.code} value={category.code}>{category.name}</option>
               ))}
-            </select>
+            </SearchableSelect>
           </label>
-          <div className="toolbar-note">
-            <strong>{selectedCategory?.name || 'Reference Category'}</strong>
-            <span>{references.length} option{references.length === 1 ? '' : 's'}</span>
-          </div>
         </div>
 
         {loading ? (
@@ -161,6 +158,7 @@ export default function ReferenceListsPage() {
                 <tr>
                   <th>Code</th>
                   <th>Display Value</th>
+                  {selectedGroup === 'WORKFLOW_REASON' ? <th>Applicable To</th> : null}
                   <th>Sort</th>
                   <th>Status</th>
                   <th>Type</th>
@@ -172,6 +170,7 @@ export default function ReferenceListsPage() {
                   <tr key={record.id}>
                     <td><code>{record.code}</code></td>
                     <td><strong>{record.display_value}</strong></td>
+                    {selectedGroup === 'WORKFLOW_REASON' ? <td><div className="reference-context-tags">{(record.metadata?.contexts || []).map((code) => <span key={code} className="status-pill neutral">{workflowContexts.find((row) => row.code === code)?.name || code}</span>)}</div></td> : null}
                     <td>{record.sort_order}</td>
                     <td>
                       <span className={`status-pill ${record.active ? 'success' : 'neutral'}`}>
@@ -187,7 +186,7 @@ export default function ReferenceListsPage() {
                 ))}
                 {!references.length && (
                   <tr>
-                    <td colSpan="6"><div className="empty-state">No options yet for this category.</div></td>
+                    <td colSpan={selectedGroup === 'WORKFLOW_REASON' ? 7 : 6}><div className="empty-state">No options yet for this category.</div></td>
                   </tr>
                 )}
               </tbody>
@@ -205,7 +204,7 @@ export default function ReferenceListsPage() {
           <form className="form-grid" onSubmit={save}>
             <label className="form-field">
               Category
-              <select
+              <SearchableSelect
                 value={form.group_code}
                 disabled={Boolean(form.id)}
                 onChange={(event) => setForm((current) => ({ ...current, group_code: event.target.value }))}
@@ -213,7 +212,7 @@ export default function ReferenceListsPage() {
                 {categories.map((category) => (
                   <option key={category.code} value={category.code}>{category.name}</option>
                 ))}
-              </select>
+              </SearchableSelect>
             </label>
 
             <label className="form-field">
@@ -235,6 +234,35 @@ export default function ReferenceListsPage() {
                 required
               />
             </label>
+
+            {form.group_code === 'WORKFLOW_REASON' ? (
+              <fieldset className="form-field form-span-2 workflow-context-fieldset">
+                <legend>Applicable To</legend>
+                <small>{form.is_system ? 'Applicable workflows are fixed for system reasons. You may change the display value or deactivate the reason.' : 'Select the workflows where this standardized reason should appear.'}</small>
+                <div className="workflow-context-grid">
+                  {workflowContexts.map((context) => {
+                    const checked = (form.metadata?.contexts || []).includes(context.code)
+                    return (
+                      <label className="workflow-context-option" key={context.code}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={form.is_system}
+                          onChange={(event) => setForm((current) => {
+                            const existing = current.metadata?.contexts || []
+                            const contexts = event.target.checked
+                              ? [...new Set([...existing, context.code])]
+                              : existing.filter((code) => code !== context.code)
+                            return { ...current, metadata: { ...(current.metadata || {}), contexts } }
+                          })}
+                        />
+                        <span>{context.name}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </fieldset>
+            ) : null}
 
             <label className="form-field">
               Sort Order

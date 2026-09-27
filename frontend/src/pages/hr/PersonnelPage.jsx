@@ -1,11 +1,41 @@
+import SearchableSelect from '../../components/common/SearchableSelect'
 import { useCallback, useEffect, useState } from 'react'
 import { api, getApiErrorMessage } from '../../api/client'
 import ActionMenu from '../../components/common/ActionMenu'
 import Modal from '../../components/common/Modal'
 import { useAuth } from '../../context/AuthContext'
+import WorkScheduleModal from './WorkScheduleModal'
+import './attendance.css'
 
 function options(references, key) {
   return references?.[key] || []
+}
+
+function compensationSnapshot(source) {
+  return {
+    compensation_rule_code: source?.compensation_rule_code || source?.compensation_rule?.code || 'NONE',
+    hourly_rate: Number(source?.hourly_rate || 0),
+    ot_entitled: Boolean(source?.ot_entitled),
+    ot_multiplier: source?.ot_multiplier === '' || source?.ot_multiplier == null ? null : Number(source.ot_multiplier),
+    guaranteed_daily_pay: Number(source?.guaranteed_daily_pay || 0),
+    compensation_effective_from: source?.compensation_effective_from || '',
+  }
+}
+
+function compensationTermsChanged(form) {
+  if (!form?._original_compensation) return false
+  const current = compensationSnapshot(form)
+  const original = form._original_compensation
+  return current.compensation_rule_code !== original.compensation_rule_code
+    || Math.abs(current.hourly_rate - original.hourly_rate) > 0.0001
+    || current.ot_entitled !== original.ot_entitled
+    || current.ot_multiplier !== original.ot_multiplier
+    || Math.abs(current.guaranteed_daily_pay - original.guaranteed_daily_pay) > 0.0001
+}
+
+function displayDate(value) {
+  if (!value) return ''
+  return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(`${value}T00:00:00`))
 }
 
 function newPersonnel(references) {
@@ -28,8 +58,18 @@ function newPersonnel(references) {
     ot_multiplier: '',
     compensation_rule_code: 'HOURLY_PLUS_COMMISSION',
     guaranteed_daily_pay: 0,
+    compensation_effective_from: new Date().toISOString().slice(0, 10),
+    compensation_effective_date_control: null,
+    _original_compensation: null,
     can_perform_services: true,
     commission_eligible: true,
+    paid_leave_entitled: true,
+    sss_enabled: false,
+    sss_number: '',
+    philhealth_enabled: false,
+    philhealth_number: '',
+    pagibig_enabled: false,
+    pagibig_number: '',
     hire_date: '',
     linked_user_id: '',
     status: 'ACTIVE',
@@ -47,6 +87,7 @@ export default function PersonnelPage() {
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [schedulePersonnel, setSchedulePersonnel] = useState(null)
 
   const load = useCallback(async () => {
     const response = await api.get('/v1/hr/personnel')
@@ -92,8 +133,18 @@ export default function PersonnelPage() {
       ot_multiplier: record.ot_multiplier ?? '',
       compensation_rule_code: record.compensation_rule?.code || 'HOURLY_PLUS_COMMISSION',
       guaranteed_daily_pay: record.guaranteed_daily_pay || 0,
+      compensation_effective_from: record.compensation_effective_from || new Date().toISOString().slice(0, 10),
+      compensation_effective_date_control: record.compensation_effective_date_control || null,
+      _original_compensation: compensationSnapshot(record),
       can_perform_services: record.can_perform_services,
       commission_eligible: record.commission_eligible,
+      paid_leave_entitled: record.paid_leave_entitled !== false,
+      sss_enabled: Boolean(record.sss_enabled),
+      sss_number: record.sss_number || '',
+      philhealth_enabled: Boolean(record.philhealth_enabled),
+      philhealth_number: record.philhealth_number || '',
+      pagibig_enabled: Boolean(record.pagibig_enabled),
+      pagibig_number: record.pagibig_number || '',
       hire_date: record.hire_date || '',
       linked_user_id: record.linked_user?.id || '',
       status: record.status || 'ACTIVE',
@@ -107,7 +158,6 @@ export default function PersonnelPage() {
 
       if (key === 'position_code' && value === 'MANAGING_PARTNER') {
         next.personnel_type_code = 'PARTNER'
-        next.profit_sharing_eligible = true
       }
 
       if (key === 'personnel_type_code' && value !== 'PARTNER') {
@@ -119,6 +169,18 @@ export default function PersonnelPage() {
         next.guaranteed_daily_pay = 0
         next.ot_entitled = false
         next.ot_multiplier = ''
+      }
+
+      const compensationKeys = ['compensation_rule_code', 'hourly_rate', 'ot_entitled', 'ot_multiplier', 'guaranteed_daily_pay']
+      if (compensationKeys.includes(key) && next._original_compensation) {
+        const changed = compensationTermsChanged(next)
+        const earliest = next.compensation_effective_date_control?.earliest_effective_date
+        if (changed && earliest && (!next.compensation_effective_from || next.compensation_effective_from < earliest)) {
+          next.compensation_effective_from = earliest
+        }
+        if (!changed) {
+          next.compensation_effective_from = next._original_compensation.compensation_effective_from
+        }
       }
 
       return next
@@ -139,6 +201,7 @@ export default function PersonnelPage() {
         hourly_rate: Number(form.hourly_rate || 0),
         ot_multiplier: form.ot_multiplier === '' ? null : Number(form.ot_multiplier),
         guaranteed_daily_pay: Number(form.guaranteed_daily_pay || 0),
+        compensation_effective_from: form.compensation_effective_from || null,
         profit_sharing_effective_from: form.profit_sharing_effective_from || null,
         profit_sharing_effective_until: form.profit_sharing_effective_until || null,
         hire_date: form.hire_date || null,
@@ -163,6 +226,9 @@ export default function PersonnelPage() {
   const isPartner = form?.personnel_type_code === 'PARTNER'
   const guaranteed = form?.compensation_rule_code === 'GUARANTEED_VS_COMMISSION'
   const noOperationalComp = form?.compensation_rule_code === 'NONE'
+  const compensationChanged = compensationTermsChanged(form)
+  const compensationControl = form?.compensation_effective_date_control
+  const earliestCompensationDate = compensationChanged ? compensationControl?.earliest_effective_date : undefined
 
   return (
     <div className="page-stack">
@@ -218,6 +284,7 @@ export default function PersonnelPage() {
                     <td><span className={`status-pill ${record.status === 'ACTIVE' ? 'success' : 'neutral'}`}>{record.status}</span></td>
                     <td className="action-cell"><ActionMenu items={[
                       hasPermission('employees', 'EDIT') ? { label: 'Edit', onClick: () => openEdit(record) } : null,
+                      hasPermission('employees', 'EDIT') ? { label: 'Work Schedule', onClick: () => setSchedulePersonnel(record) } : null,
                     ]} /></td>
                   </tr>
                 ))}
@@ -230,6 +297,8 @@ export default function PersonnelPage() {
         )}
       </section>
 
+      {schedulePersonnel ? <WorkScheduleModal personnel={schedulePersonnel} onClose={() => setSchedulePersonnel(null)} /> : null}
+
       {form && (
         <Modal
           title={form.id ? 'Edit Personnel' : 'Add Personnel'}
@@ -237,7 +306,7 @@ export default function PersonnelPage() {
           onClose={() => setForm(null)}
           wide
         >
-          <form className="form-grid" onSubmit={save}>
+          <form className="form-grid personnel-form-grid" onSubmit={save}>
             <label className="form-field">
               First Name
               <input value={form.first_name} onChange={(event) => updateForm('first_name', event.target.value)} required />
@@ -257,58 +326,73 @@ export default function PersonnelPage() {
 
             <label className="form-field">
               Personnel Type
-              <select value={form.personnel_type_code} onChange={(event) => updateForm('personnel_type_code', event.target.value)}>
+              <SearchableSelect value={form.personnel_type_code} onChange={(event) => updateForm('personnel_type_code', event.target.value)}>
                 {options(references, 'PERSONNEL_TYPE').map((option) => (
                   <option key={option.code} value={option.code}>{option.display_value}</option>
                 ))}
-              </select>
+              </SearchableSelect>
             </label>
 
             <label className="form-field">
               Position
-              <select value={form.position_code} onChange={(event) => updateForm('position_code', event.target.value)}>
+              <SearchableSelect value={form.position_code} onChange={(event) => updateForm('position_code', event.target.value)}>
                 {options(references, 'EMPLOYEE_POSITION').map((option) => (
                   <option key={option.code} value={option.code}>{option.display_value}</option>
                 ))}
-              </select>
+              </SearchableSelect>
             </label>
 
             <label className="form-field">
               Branch
-              <select value={form.branch_id} onChange={(event) => updateForm('branch_id', event.target.value)}>
+              <SearchableSelect value={form.branch_id} onChange={(event) => updateForm('branch_id', event.target.value)}>
                 <option value="">No Specific Branch</option>
                 {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-              </select>
+              </SearchableSelect>
             </label>
 
             {!isPartner && (
               <label className="form-field">
                 Employment Type
-                <select value={form.employment_type_code} onChange={(event) => updateForm('employment_type_code', event.target.value)}>
+                <SearchableSelect value={form.employment_type_code} onChange={(event) => updateForm('employment_type_code', event.target.value)}>
                   {options(references, 'EMPLOYMENT_TYPE').map((option) => (
                     <option key={option.code} value={option.code}>{option.display_value}</option>
                   ))}
-                </select>
+                </SearchableSelect>
               </label>
             )}
 
             <label className="form-field">
               Linked User
-              <select value={form.linked_user_id} onChange={(event) => updateForm('linked_user_id', event.target.value)}>
+              <SearchableSelect value={form.linked_user_id} onChange={(event) => updateForm('linked_user_id', event.target.value)}>
                 <option value="">No linked user</option>
                 {users.map((user) => (
                   <option key={user.id} value={user.id}>{user.display_name} (@{user.username})</option>
                 ))}
-              </select>
+              </SearchableSelect>
             </label>
 
             <label className="form-field">
               Operational Compensation
-              <select value={form.compensation_rule_code} onChange={(event) => updateForm('compensation_rule_code', event.target.value)}>
+              <SearchableSelect value={form.compensation_rule_code} onChange={(event) => updateForm('compensation_rule_code', event.target.value)}>
                 {options(references, 'COMPENSATION_RULE').map((option) => (
                   <option key={option.code} value={option.code}>{option.display_value}</option>
                 ))}
-              </select>
+              </SearchableSelect>
+            </label>
+
+            <label className="form-field">
+              Compensation Effective From
+              <input
+                type="date"
+                value={form.compensation_effective_from || ''}
+                min={earliestCompensationDate}
+                onChange={(event) => updateForm('compensation_effective_from', event.target.value)}
+              />
+              {compensationChanged && compensationControl?.blocked_through ? (
+                <small>Compensation activity already exists through {displayDate(compensationControl.blocked_through)}. Earliest effective date: {displayDate(compensationControl.earliest_effective_date)}. Future dates remain allowed.</small>
+              ) : (
+                <small>Required when compensation terms change. Existing payroll and earned compensation history will never be rewritten.</small>
+              )}
             </label>
 
             {!noOperationalComp && !guaranteed && (
@@ -332,10 +416,10 @@ export default function PersonnelPage() {
 
             <label className="form-field">
               Status
-              <select value={form.status} onChange={(event) => updateForm('status', event.target.value)}>
+              <SearchableSelect value={form.status} onChange={(event) => updateForm('status', event.target.value)}>
                 <option value="ACTIVE">Active</option>
                 <option value="INACTIVE">Inactive</option>
-              </select>
+              </SearchableSelect>
             </label>
 
             {!noOperationalComp && (
@@ -348,8 +432,46 @@ export default function PersonnelPage() {
                   </label>
                   <label className="form-field">
                     OT Multiplier
-                    <input type="number" min="1" step="0.01" disabled={!form.ot_entitled} value={form.ot_multiplier} onChange={(event) => updateForm('ot_multiplier', event.target.value)} />
+                    <input type="number" min="0.001" step="0.001" disabled={!form.ot_entitled} value={form.ot_multiplier} onChange={(event) => updateForm('ot_multiplier', event.target.value)} />
                   </label>
+                </div>
+              </div>
+            )}
+
+            <div className="form-span-2 section-box">
+              <h3>Leave Entitlement</h3>
+              <label className="checkbox-field">
+                <input type="checkbox" checked={form.paid_leave_entitled} onChange={(event) => updateForm('paid_leave_entitled', event.target.checked)} />
+                <span><strong>Leave Entitled</strong><small>Controls whether this personnel can file Leave requests. Day Off requests remain available.</small></span>
+              </label>
+            </div>
+
+            {form.personnel_type_code === 'EMPLOYEE' && (
+              <div className="form-span-2 section-box">
+                <h3>Statutory Benefits</h3>
+                <p className="section-note">Enable only the government programs applicable to this personnel. Payroll fields and accounting payables are prepared for SSS, PhilHealth, and Pag-IBIG contribution posting.</p>
+                <div className="statutory-benefits-grid">
+                  <div className="statutory-benefit-card">
+                    <label className="checkbox-field compact-checkbox-field">
+                      <input type="checkbox" checked={form.sss_enabled} onChange={(event) => updateForm('sss_enabled', event.target.checked)} />
+                      <span><strong>SSS</strong></span>
+                    </label>
+                    <label className="form-field"><span>SSS Number</span><input disabled={!form.sss_enabled} value={form.sss_number} onChange={(event) => updateForm('sss_number', event.target.value)} placeholder="Optional for setup" /></label>
+                  </div>
+                  <div className="statutory-benefit-card">
+                    <label className="checkbox-field compact-checkbox-field">
+                      <input type="checkbox" checked={form.philhealth_enabled} onChange={(event) => updateForm('philhealth_enabled', event.target.checked)} />
+                      <span><strong>PhilHealth</strong></span>
+                    </label>
+                    <label className="form-field"><span>PhilHealth Number</span><input disabled={!form.philhealth_enabled} value={form.philhealth_number} onChange={(event) => updateForm('philhealth_number', event.target.value)} placeholder="Optional for setup" /></label>
+                  </div>
+                  <div className="statutory-benefit-card">
+                    <label className="checkbox-field compact-checkbox-field">
+                      <input type="checkbox" checked={form.pagibig_enabled} onChange={(event) => updateForm('pagibig_enabled', event.target.checked)} />
+                      <span><strong>Pag-IBIG</strong></span>
+                    </label>
+                    <label className="form-field"><span>Pag-IBIG MID Number</span><input disabled={!form.pagibig_enabled} value={form.pagibig_number} onChange={(event) => updateForm('pagibig_number', event.target.value)} placeholder="Optional for setup" /></label>
+                  </div>
                 </div>
               </div>
             )}
@@ -380,7 +502,7 @@ export default function PersonnelPage() {
                   <div className="form-grid nested-grid">
                     <label className="form-field">
                       Profit Sharing %
-                      <input type="number" min="0.0001" max="100" step="0.01" value={form.profit_sharing_percentage} onChange={(event) => updateForm('profit_sharing_percentage', event.target.value)} />
+                      <input type="number" min="0.0001" max="100" step="any" value={form.profit_sharing_percentage} onChange={(event) => updateForm('profit_sharing_percentage', event.target.value)} />
                     </label>
                     <label className="form-field">
                       Effective From

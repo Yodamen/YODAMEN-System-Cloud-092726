@@ -13,6 +13,9 @@ class SaveReferenceValueRequest extends FormRequest
             'code' => ['required', 'string', 'max:100', 'regex:/^[A-Za-z0-9_-]+$/'],
             'display_value' => ['required', 'string', 'max:150'],
             'sort_order' => ['nullable', 'integer', 'min:0', 'max:999999'],
+            'metadata' => ['nullable', 'array'],
+            'metadata.contexts' => ['nullable', 'array', 'max:50'],
+            'metadata.contexts.*' => ['required', 'string', 'max:80', 'distinct'],
         ];
     }
 }

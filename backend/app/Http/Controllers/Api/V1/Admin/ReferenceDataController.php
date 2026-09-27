@@ -19,6 +19,7 @@ class ReferenceDataController extends Controller
             'categories' => ReferenceGroup::query()
                 ->where('business_id', $request->user()->business_id)
                 ->where('active', true)
+                ->where('code', '<>', 'CUSTOMER_TYPE')
                 ->orderBy('name')
                 ->get(['id', 'code', 'name', 'description', 'is_system']),
         ]);
@@ -100,6 +101,7 @@ class ReferenceDataController extends Controller
             'sort_order' => $value->sort_order,
             'is_system' => $value->is_system,
             'active' => $value->active,
+            'metadata' => $value->metadata,
         ];
     }
 }

@@ -1,0 +1,213 @@
+.inventory-summary-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.inventory-summary-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-areas:
+    'active active cost cost'
+    'low low retail retail';
+}
+.inventory-grid-active { grid-area: active; }
+.inventory-grid-low { grid-area: low; }
+.inventory-grid-cost { grid-area: cost; }
+.inventory-grid-retail { grid-area: retail; }
+.inventory-filter-grid { display:grid; grid-template-columns:minmax(170px,.8fr) minmax(260px,1.6fr) auto; gap:10px; align-items:end; }
+.inventory-dashboard-filter-grid { grid-template-columns: 135px minmax(290px, 1.55fr) 155px 115px 115px auto; gap:8px; }
+.inventory-dashboard-filter-grid .form-field { min-width:0; }
+.inventory-movement-filters { grid-template-columns:160px 150px 150px 150px minmax(220px,1.4fr) auto; }
+@media(max-width:1100px){
+  .inventory-summary-grid,.inventory-summary-grid-v2{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-areas:none}
+  .inventory-grid-active,.inventory-grid-low,.inventory-grid-cost,.inventory-grid-retail{grid-area:auto}
+  .inventory-filter-grid,.inventory-dashboard-filter-grid,.inventory-movement-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:680px){.inventory-summary-grid,.inventory-summary-grid-v2,.inventory-filter-grid,.inventory-dashboard-filter-grid,.inventory-movement-filters{grid-template-columns:1fr}}
+
+.inventory-dashboard-table .inventory-product-link {
+  display: inline-grid;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.inventory-dashboard-table .inventory-product-link:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.inventory-dashboard-table .inventory-product-link span {
+  color: var(--muted);
+  font-size: .68rem;
+}
+
+.inventory-sellable-icon {
+  display: inline-flex;
+  min-width: 34px;
+  height: 20px;
+  padding: 0 8px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: .66rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.inventory-sellable-icon.yes {
+  border: 1px solid #b7dfc5;
+  background: #edf9f1;
+  color: #24713f;
+}
+
+.inventory-sellable-icon.no {
+  border: 1px solid #dedfe3;
+  background: #f6f6f7;
+  color: #7b7c82;
+}
+
+.inventory-detail-modal.modal-card.wide {
+  width: min(1320px, calc(100vw - 28px));
+  max-width: none;
+}
+
+.inventory-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.inventory-detail-summary article {
+  display: grid;
+  gap: 4px;
+  min-height: 74px;
+  align-content: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.inventory-detail-summary article span:first-child {
+  color: var(--muted);
+  font-size: .62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.inventory-detail-summary article strong {
+  font-size: .9rem;
+}
+
+.inventory-detail-filters {
+  display: grid;
+  grid-template-columns: 150px 150px minmax(190px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.inventory-detail-movements {
+  max-height: 430px;
+  overflow: auto;
+}
+
+.inventory-cost-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: .68rem;
+}
+
+@media(max-width:1000px){
+  .inventory-detail-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .inventory-detail-filters{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
+@media(max-width:650px){
+  .inventory-detail-summary,.inventory-detail-filters{grid-template-columns:1fr}
+}
+
+/* Update 89: dashboard stock-status expansion */
+.inventory-summary-grid-v3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.status-pill.danger {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+@media(max-width:900px){
+  .inventory-summary-grid-v3{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:600px){
+  .inventory-summary-grid-v3{grid-template-columns:1fr}
+}
+
+.inventory-dashboard-table th,
+.inventory-dashboard-table td,
+.inventory-detail-movement-table th,
+.inventory-detail-movement-table td {
+  white-space: nowrap;
+}
+
+.inventory-dashboard-table {
+  min-width: 1080px;
+}
+
+.inventory-detail-movement-table {
+  min-width: 980px;
+}
+
+.inventory-detail-movement-table th,
+.inventory-detail-movement-table td {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.inventory-detail-movement-table th:last-child,
+.inventory-detail-movement-table td:last-child {
+  width: 260px;
+  min-width: 220px;
+  max-width: 320px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+/* Update 100K4: clearer inventory states and tighter adjustment layout */
+.status-pill.inventory-status-low { background:#fff3bf; color:#7a4d00; border-color:#f1c453; }
+.status-pill.inventory-status-out { background:#ffe0b2; color:#8a3f00; border-color:#f59e42; }
+.status-pill.inventory-status-negative { background:#ffd6d6; color:#9d0b0b; border-color:#dc4747; }
+.inventory-adjustment-qty { min-width:0; }
+.inventory-adjustment-uom input[readonly] { background:#f5f6f8; font-weight:600; }
+
+/* Update 100K7C: slimmer Inventory Dashboard summary cards */
+.inventory-summary-grid-v3 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.inventory-summary-grid-v3 .metric-card {
+  min-height: 62px;
+  padding: 9px 11px;
+  border-radius: 8px;
+}
+.inventory-summary-grid-v3 .metric-card span {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.inventory-summary-grid-v3 .metric-card strong {
+  margin-top: 3px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+@media(max-width:1050px){.inventory-summary-grid-v3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.inventory-summary-grid-v3{grid-template-columns:1fr}}

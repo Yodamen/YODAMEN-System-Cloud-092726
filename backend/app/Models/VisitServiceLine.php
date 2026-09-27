@@ -13,7 +13,7 @@ class VisitServiceLine extends Model
 
     protected $fillable = [
         'visit_id', 'queue_service_line_id', 'booking_service_line_id', 'code', 'service_id', 'service_name_snapshot',
-        'source_type', 'source_reference_code', 'quantity', 'assigned_personnel_id', 'assigned_personnel_name_snapshot',
+        'source_type', 'source_reference_code', 'package_enrollment_id', 'service_credit_id', 'quantity', 'assigned_personnel_id', 'assigned_personnel_name_snapshot',
         'status', 'started_at', 'completed_at', 'cancelled_at', 'cancelled_by', 'cancellation_reason', 'notes',
         'sort_order', 'created_by', 'updated_by',
     ];
@@ -34,6 +34,9 @@ class VisitServiceLine extends Model
     public function assignedPersonnel(): BelongsTo { return $this->belongsTo(Personnel::class, 'assigned_personnel_id'); }
     public function cancelledBy(): BelongsTo { return $this->belongsTo(User::class, 'cancelled_by'); }
     public function completionEvent(): HasOne { return $this->hasOne(ServiceCompletionEvent::class); }
+    public function materialConsumption(): HasOne { return $this->hasOne(ServiceConsumption::class); }
+    public function packageEnrollment(): BelongsTo { return $this->belongsTo(PackageEnrollment::class); }
+    public function serviceCredit(): BelongsTo { return $this->belongsTo(ServiceCredit::class); }
 
     public function isFinalized(): bool
     {

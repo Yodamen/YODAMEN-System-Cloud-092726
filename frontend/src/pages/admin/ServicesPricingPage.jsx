@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import SearchableSelect from '../../components/common/SearchableSelect'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, getApiErrorMessage } from '../../api/client'
 import ActionMenu from '../../components/common/ActionMenu'
 import Modal from '../../components/common/Modal'
 import { useAuth } from '../../context/AuthContext'
 import { formatDisplayDate } from '../../utils/formatters'
+import './services-pricing.css'
 
 function optionList(references, key) {
   return references?.[key] || []
@@ -39,6 +41,11 @@ export default function ServicesPricingPage() {
   const [formMessage, setFormMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [search, setSearch] = useState('')
+  const [serviceNameFilter, setServiceNameFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [countFilter, setCountFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
 
   const load = useCallback(async () => {
     const response = await api.get('/v1/admin/services')
@@ -55,6 +62,32 @@ export default function ServicesPricingPage() {
 
     return () => window.clearTimeout(timer)
   }, [load])
+
+  const filteredServices = useMemo(() => {
+    const term = search.trim().toLowerCase()
+
+    return services.filter((service) => {
+      if (term) {
+        const haystack = `${service.code || ''} ${service.name || ''}`.toLowerCase()
+        if (!haystack.includes(term)) return false
+      }
+
+      if (serviceNameFilter && String(service.id) !== String(serviceNameFilter)) return false
+      if (categoryFilter && service.category?.code !== categoryFilter) return false
+      if (countFilter && service.service_count?.code !== countFilter) return false
+      if (statusFilter && service.status?.code !== statusFilter) return false
+
+      return true
+    })
+  }, [services, search, serviceNameFilter, categoryFilter, countFilter, statusFilter])
+
+  function resetFilters() {
+    setSearch('')
+    setServiceNameFilter('')
+    setCategoryFilter('')
+    setCountFilter('')
+    setStatusFilter('')
+  }
 
   function openCreate() {
     setMessage('')
@@ -176,6 +209,15 @@ export default function ServicesPricingPage() {
       {message ? <div className="form-alert error">{message}</div> : null}
 
       <section className="content-card">
+        <div className="services-pricing-filter-panel">
+          <label className="form-field services-pricing-search"><span>Search</span><input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Service ID / keyword" /></label>
+          <label className="form-field services-pricing-name"><span>Service Name</span><SearchableSelect value={serviceNameFilter} onChange={(event) => setServiceNameFilter(event.target.value)}><option value="">All Services</option>{[...services].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''))).map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}</SearchableSelect></label>
+          <label className="form-field services-pricing-category"><span>Category</span><SearchableSelect value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}><option value="">All Categories</option>{optionList(references, 'SERVICE_CATEGORY').map((option) => <option key={option.code} value={option.code}>{option.display_value}</option>)}</SearchableSelect></label>
+          <label className="form-field services-pricing-count"><span>Service Count</span><SearchableSelect value={countFilter} onChange={(event) => setCountFilter(event.target.value)}><option value="">All Counts</option>{optionList(references, 'SERVICE_COUNT').map((option) => <option key={option.code} value={option.code}>{option.display_value}</option>)}</SearchableSelect></label>
+          <label className="form-field services-pricing-status"><span>Status</span><SearchableSelect value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}><option value="">All Statuses</option>{optionList(references, 'SERVICE_STATUS').map((option) => <option key={option.code} value={option.code}>{option.display_value}</option>)}</SearchableSelect></label>
+          <div className="filter-actions-inline services-pricing-filter-actions"><button type="button" className="secondary-button" onClick={resetFilters}>Reset</button></div>
+        </div>
+
         {loading ? (
           <div className="empty-state">Loading services...</div>
         ) : (
@@ -194,7 +236,7 @@ export default function ServicesPricingPage() {
                 </tr>
               </thead>
               <tbody>
-                {services.map((service) => (
+                {filteredServices.map((service) => (
                   <tr key={service.id}>
                     <td><strong>{service.name}</strong><small className="table-subline">{service.code}</small></td>
                     <td>{service.category?.display_value || '—'}</td>
@@ -211,7 +253,7 @@ export default function ServicesPricingPage() {
                     </td>
                   </tr>
                 ))}
-                {!services.length && <tr><td colSpan="8"><div className="empty-state">No services yet.</div></td></tr>}
+                {!filteredServices.length && <tr><td colSpan="8"><div className="empty-state">No services match the selected filters.</div></td></tr>}
               </tbody>
             </table>
           </div>
@@ -224,13 +266,13 @@ export default function ServicesPricingPage() {
           <form className="form-grid" onSubmit={(event) => { if (form.id && !canEditService) event.preventDefault(); else saveService(event) }}>
             <label className="form-field form-span-2">Service Name<input value={form.name} disabled={Boolean(form.id) && !canEditService} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} required /></label>
 
-            <label className="form-field">Service Category<select value={form.category_code} disabled={Boolean(form.id) && !canEditService} onChange={(event) => setForm((current) => ({ ...current, category_code: event.target.value }))}>{optionList(references, 'SERVICE_CATEGORY').map((option) => <option key={option.code} value={option.code}>{option.display_value}</option>)}</select></label>
+            <label className="form-field">Service Category<SearchableSelect value={form.category_code} disabled={Boolean(form.id) && !canEditService} onChange={(event) => setForm((current) => ({ ...current, category_code: event.target.value }))}>{optionList(references, 'SERVICE_CATEGORY').map((option) => <option key={option.code} value={option.code}>{option.display_value}</option>)}</SearchableSelect></label>
 
-            <label className="form-field">Service Count<select value={form.service_count_code} disabled={Boolean(form.id) && !canEditService} onChange={(event) => setForm((current) => ({ ...current, service_count_code: event.target.value, number_of_sessions: event.target.value === 'SINGLE_SESSION' ? 1 : current.number_of_sessions }))}>{optionList(references, 'SERVICE_COUNT').map((option) => <option key={option.code} value={option.code}>{option.display_value}</option>)}</select></label>
+            <label className="form-field">Service Count<SearchableSelect value={form.service_count_code} disabled={Boolean(form.id) && !canEditService} onChange={(event) => setForm((current) => ({ ...current, service_count_code: event.target.value, number_of_sessions: event.target.value === 'SINGLE_SESSION' ? 1 : current.number_of_sessions }))}>{optionList(references, 'SERVICE_COUNT').map((option) => <option key={option.code} value={option.code}>{option.display_value}</option>)}</SearchableSelect></label>
 
             <label className="form-field">Number of Sessions<input type="number" min="1" disabled={(Boolean(form.id) && !canEditService) || form.service_count_code === 'SINGLE_SESSION'} value={form.service_count_code === 'SINGLE_SESSION' ? 1 : form.number_of_sessions} onChange={(event) => setForm((current) => ({ ...current, number_of_sessions: event.target.value }))} /></label>
             <label className="form-field">Duration (Minutes)<input type="number" min="0" value={form.duration_minutes} disabled={Boolean(form.id) && !canEditService} onChange={(event) => setForm((current) => ({ ...current, duration_minutes: event.target.value }))} /></label>
-            <label className="form-field">Status<select value={form.status_code} disabled={Boolean(form.id) && !canEditService} onChange={(event) => setForm((current) => ({ ...current, status_code: event.target.value }))}>{optionList(references, 'SERVICE_STATUS').map((option) => <option key={option.code} value={option.code}>{option.display_value}</option>)}</select></label>
+            <label className="form-field">Status<SearchableSelect value={form.status_code} disabled={Boolean(form.id) && !canEditService} onChange={(event) => setForm((current) => ({ ...current, status_code: event.target.value }))}>{optionList(references, 'SERVICE_STATUS').map((option) => <option key={option.code} value={option.code}>{option.display_value}</option>)}</SearchableSelect></label>
 
             {!form.id && (
               <>
@@ -262,7 +304,7 @@ export default function ServicesPricingPage() {
                           <td className="money-cell">₱{Number(price.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                           <td>{formatDisplayDate(price.effective_from)}</td>
                           <td>{price.effective_until ? formatDisplayDate(price.effective_until) : 'Open'}</td>
-                          <td><span className={`status-pill ${price.status === 'ACTIVE' ? 'success' : 'neutral'}`}>{price.status}</span></td>
+                          <td><span className={`status-pill ${price.status === 'ACTIVE' ? 'success' : price.status === 'SCHEDULED' ? 'warning' : 'neutral'}`}>{price.status}</span></td>
                         </tr>
                       ))}
                       {!form.price_history?.length && <tr><td colSpan="5"><div className="empty-state compact-empty">No price history yet.</div></td></tr>}
@@ -299,7 +341,7 @@ export default function ServicesPricingPage() {
                     <td className="money-cell">₱{Number(price.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                     <td>{formatDisplayDate(price.effective_from)}</td>
                     <td>{price.effective_until ? formatDisplayDate(price.effective_until) : 'Open'}</td>
-                    <td><span className={`status-pill ${price.status === 'ACTIVE' ? 'success' : 'neutral'}`}>{price.status}</span></td>
+                    <td><span className={`status-pill ${price.status === 'ACTIVE' ? 'success' : price.status === 'SCHEDULED' ? 'warning' : 'neutral'}`}>{price.status}</span></td>
                   </tr>
                 ))}
               </tbody>

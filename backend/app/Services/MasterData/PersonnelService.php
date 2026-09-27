@@ -3,10 +3,18 @@
 namespace App\Services\MasterData;
 
 use App\Models\Branch;
+use App\Models\CommissionEarning;
+use App\Models\DailyCompensation;
 use App\Models\Personnel;
+use App\Models\PersonnelCompensationTerm;
+use App\Models\PayrollAdjustment;
+use App\Models\PayrollLine;
+use App\Models\PayrollRun;
 use App\Models\User;
+use App\Services\Foundation\BusinessClock;
 use App\Services\Foundation\CodeSequenceService;
 use App\Services\Security\AuditService;
+use Carbon\CarbonImmutable;
 use DomainException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +25,7 @@ class PersonnelService
         private readonly ReferenceDataService $references,
         private readonly CodeSequenceService $codes,
         private readonly AuditService $audit,
+        private readonly BusinessClock $clock,
     ) {
     }
 
@@ -33,7 +42,6 @@ class PersonnelService
 
             if ($position->code === 'MANAGING_PARTNER') {
                 $personnelType = $this->references->valueByCode($actor->business_id, 'PERSONNEL_TYPE', 'PARTNER');
-                $data['profit_sharing_eligible'] = true;
             }
 
             $employmentType = null;
@@ -48,6 +56,16 @@ class PersonnelService
             $this->validateRules($actor, $data, $position->code, $personnelType->code, $compRule->code, $personnel?->id);
 
             $before = $personnel ? $this->snapshot($personnel->loadMissing(['position', 'personnelType', 'employmentType', 'compensationRule'])) : null;
+            $compensationChanged = $this->compensationChanged($personnel, $data, $compRule->id, $compRule->code);
+            $compensationEffectiveFrom = $personnel?->compensation_effective_from?->toDateString();
+            if (! $personnel || $compensationChanged) {
+                $compensationEffectiveFrom = $this->validatedCompensationEffectiveFrom($actor, $personnel, $data);
+            }
+
+            $isEmployee = $personnelType->code === 'EMPLOYEE';
+            $sssEnabled = $isEmployee && (array_key_exists('sss_enabled', $data) ? (bool) $data['sss_enabled'] : (bool) ($personnel?->sss_enabled ?? false));
+            $philhealthEnabled = $isEmployee && (array_key_exists('philhealth_enabled', $data) ? (bool) $data['philhealth_enabled'] : (bool) ($personnel?->philhealth_enabled ?? false));
+            $pagibigEnabled = $isEmployee && (array_key_exists('pagibig_enabled', $data) ? (bool) $data['pagibig_enabled'] : (bool) ($personnel?->pagibig_enabled ?? false));
 
             $attributes = [
                 'business_id' => $actor->business_id,
@@ -78,8 +96,18 @@ class PersonnelService
                 'guaranteed_daily_pay' => $compRule->code === 'GUARANTEED_VS_COMMISSION'
                     ? round((float) $data['guaranteed_daily_pay'], 2)
                     : 0,
+                'compensation_effective_from' => $compensationEffectiveFrom,
                 'can_perform_services' => (bool) $data['can_perform_services'],
                 'commission_eligible' => (bool) $data['commission_eligible'],
+                'paid_leave_entitled' => array_key_exists('paid_leave_entitled', $data)
+                    ? (bool) $data['paid_leave_entitled']
+                    : ($personnel?->paid_leave_entitled ?? true),
+                'sss_enabled' => $sssEnabled,
+                'sss_number' => $sssEnabled ? (array_key_exists('sss_number', $data) ? (trim((string) $data['sss_number']) ?: null) : $personnel?->sss_number) : null,
+                'philhealth_enabled' => $philhealthEnabled,
+                'philhealth_number' => $philhealthEnabled ? (array_key_exists('philhealth_number', $data) ? (trim((string) $data['philhealth_number']) ?: null) : $personnel?->philhealth_number) : null,
+                'pagibig_enabled' => $pagibigEnabled,
+                'pagibig_number' => $pagibigEnabled ? (array_key_exists('pagibig_number', $data) ? (trim((string) $data['pagibig_number']) ?: null) : $personnel?->pagibig_number) : null,
                 'hire_date' => $data['hire_date'] ?? null,
                 'linked_user_id' => $data['linked_user_id'] ?? null,
                 'status' => strtoupper($data['status']),
@@ -102,6 +130,10 @@ class PersonnelService
                 }
 
                 throw $exception;
+            }
+
+            if (! $before || $compensationChanged) {
+                $this->syncCompensationTerm($actor, $personnel, $compRule->id, $compensationEffectiveFrom);
             }
 
             $personnel->refresh()->load(['position', 'branch', 'employmentType', 'personnelType', 'compensationRule', 'linkedUser']);
@@ -147,8 +179,17 @@ class PersonnelService
             'ot_multiplier' => $personnel->ot_multiplier !== null ? (float) $personnel->ot_multiplier : null,
             'compensation_rule' => $this->refPayload($personnel->compensationRule),
             'guaranteed_daily_pay' => (float) $personnel->guaranteed_daily_pay,
+            'compensation_effective_from' => $personnel->compensation_effective_from?->toDateString(),
+            'compensation_effective_date_control' => $this->compensationEffectiveDateControl($personnel),
             'can_perform_services' => $personnel->can_perform_services,
             'commission_eligible' => $personnel->commission_eligible,
+            'paid_leave_entitled' => (bool) $personnel->paid_leave_entitled,
+            'sss_enabled' => (bool) $personnel->sss_enabled,
+            'sss_number' => $personnel->sss_number,
+            'philhealth_enabled' => (bool) $personnel->philhealth_enabled,
+            'philhealth_number' => $personnel->philhealth_number,
+            'pagibig_enabled' => (bool) $personnel->pagibig_enabled,
+            'pagibig_number' => $personnel->pagibig_number,
             'hire_date' => $personnel->hire_date?->toDateString(),
             'linked_user' => $personnel->linkedUser ? [
                 'id' => $personnel->linkedUser->id,
@@ -192,8 +233,8 @@ class PersonnelService
         if ($compRuleCode !== 'NONE' && (bool) $data['ot_entitled']) {
             $multiplier = $data['ot_multiplier'] ?? null;
 
-            if ($multiplier === null || (float) $multiplier < 1) {
-                throw new DomainException('OT Multiplier is required and must be at least 1.00 when OT Entitled is enabled.');
+            if ($multiplier === null || (float) $multiplier <= 0) {
+                throw new DomainException('OT Multiplier is required and must be greater than 0 when OT Entitled is enabled.');
             }
         }
 
@@ -243,10 +284,186 @@ class PersonnelService
             'hourly_rate' => (string) $personnel->hourly_rate,
             'ot_entitled' => $personnel->ot_entitled,
             'ot_multiplier' => $personnel->ot_multiplier !== null ? (string) $personnel->ot_multiplier : null,
+            'guaranteed_daily_pay' => (string) $personnel->guaranteed_daily_pay,
+            'compensation_effective_from' => $personnel->compensation_effective_from?->toDateString(),
+            'paid_leave_entitled' => (bool) $personnel->paid_leave_entitled,
+            'sss_enabled' => (bool) $personnel->sss_enabled,
+            'philhealth_enabled' => (bool) $personnel->philhealth_enabled,
+            'pagibig_enabled' => (bool) $personnel->pagibig_enabled,
             'profit_sharing_eligible' => $personnel->profit_sharing_eligible,
             'profit_sharing_percentage' => (string) $personnel->profit_sharing_percentage,
             'status' => $personnel->status,
         ];
+    }
+
+
+    private function compensationChanged(?Personnel $personnel, array $data, int $ruleId, string $ruleCode): bool
+    {
+        if (! $personnel) {
+            return true;
+        }
+
+        $hourlyRate = $ruleCode === 'NONE' ? 0.0 : round((float) ($data['hourly_rate'] ?? 0), 2);
+        $otEntitled = $ruleCode === 'NONE' ? false : (bool) ($data['ot_entitled'] ?? false);
+        $otMultiplier = $ruleCode === 'NONE' || ! $otEntitled ? null : round((float) ($data['ot_multiplier'] ?? 0), 3);
+        $guaranteedDaily = $ruleCode === 'GUARANTEED_VS_COMMISSION' ? round((float) ($data['guaranteed_daily_pay'] ?? 0), 2) : 0.0;
+
+        return (int) $personnel->compensation_rule_reference_id !== $ruleId
+            || abs((float) $personnel->hourly_rate - $hourlyRate) > 0.0001
+            || (bool) $personnel->ot_entitled !== $otEntitled
+            || (($personnel->ot_multiplier === null ? null : round((float) $personnel->ot_multiplier, 3)) !== $otMultiplier)
+            || abs((float) $personnel->guaranteed_daily_pay - $guaranteedDaily) > 0.0001;
+    }
+
+    private function validatedCompensationEffectiveFrom(User $actor, ?Personnel $personnel, array $data): string
+    {
+        $effectiveFrom = (string) ($data['compensation_effective_from'] ?? '');
+        if ($effectiveFrom === '') {
+            if ($personnel) {
+                $effectiveFrom = $personnel->compensation_effective_from?->toDateString()
+                    ?: $personnel->hire_date?->toDateString()
+                    ?: $this->clock->today();
+            } else {
+                $effectiveFrom = (string) (($data['hire_date'] ?? null) ?: $this->clock->today());
+            }
+        }
+
+        if ($personnel) {
+            $control = $this->compensationEffectiveDateControl($personnel);
+            $earliestEffectiveDate = $control['earliest_effective_date'];
+
+            if ($earliestEffectiveDate && $effectiveFrom < $earliestEffectiveDate) {
+                throw new DomainException(
+                    'Compensation activity already exists through '.$control['blocked_through'].'. '
+                    .'New compensation terms must take effect on or after '.$earliestEffectiveDate.'.'
+                );
+            }
+        }
+
+        return $effectiveFrom;
+    }
+
+    public function compensationEffectiveDateControl(Personnel $personnel): array
+    {
+        $lockedPayrollEnd = PayrollRun::query()
+            ->where('payroll_runs.business_id', $personnel->business_id)
+            ->whereIn('payroll_runs.status', ['APPROVED', 'PAID'])
+            ->whereHas('lines', fn ($query) => $query->where('personnel_id', $personnel->id))
+            ->max('period_end');
+
+        $pendingCommissionDate = CommissionEarning::query()
+            ->where('business_id', $personnel->business_id)
+            ->where('personnel_id', $personnel->id)
+            ->whereIn('status', ['OPEN', 'IN_PAYROLL_DRAFT'])
+            ->max('work_date');
+
+        $openDailyCompensationDate = DailyCompensation::query()
+            ->where('business_id', $personnel->business_id)
+            ->where('personnel_id', $personnel->id)
+            ->whereIn('status', ['OPEN', 'IN_PAYROLL_DRAFT'])
+            ->where(function ($query) {
+                $query->whereNotNull('attendance_id')
+                    ->orWhereNotNull('leave_request_id')
+                    ->orWhere('confirmed_commission', '!=', 0)
+                    ->orWhere('gross_daily_projection', '!=', 0);
+            })
+            ->max('work_date');
+
+        $openAdjustmentDate = PayrollAdjustment::query()
+            ->where('business_id', $personnel->business_id)
+            ->where('personnel_id', $personnel->id)
+            ->whereIn('status', ['OPEN', 'IN_PAYROLL_DRAFT'])
+            ->max('effective_date');
+
+        $sources = array_filter([
+            'locked_payroll' => $lockedPayrollEnd,
+            'pending_commission' => $pendingCommissionDate,
+            'open_daily_compensation' => $openDailyCompensationDate,
+            'open_payroll_adjustment' => $openAdjustmentDate,
+        ]);
+
+        $blockedThrough = null;
+        foreach ($sources as $date) {
+            if ($blockedThrough === null || $date > $blockedThrough) {
+                $blockedThrough = $date;
+            }
+        }
+
+        $earliestEffectiveDate = $blockedThrough
+            ? CarbonImmutable::parse($blockedThrough, 'Asia/Manila')->addDay()->toDateString()
+            : null;
+
+        $blockingSources = [];
+        foreach ($sources as $source => $date) {
+            if ($date === $blockedThrough) {
+                $blockingSources[] = $source;
+            }
+        }
+
+        return [
+            'blocked_through' => $blockedThrough,
+            'earliest_effective_date' => $earliestEffectiveDate,
+            'blocking_sources' => $blockingSources,
+            'latest_locked_payroll_end' => $lockedPayrollEnd,
+            'latest_pending_commission_date' => $pendingCommissionDate,
+            'latest_open_daily_compensation_date' => $openDailyCompensationDate,
+            'latest_open_payroll_adjustment_date' => $openAdjustmentDate,
+        ];
+    }
+
+    private function syncCompensationTerm(User $actor, Personnel $personnel, int $ruleId, string $effectiveFrom): void
+    {
+        $previous = PersonnelCompensationTerm::query()
+            ->where('personnel_id', $personnel->id)
+            ->whereDate('effective_from', '<', $effectiveFrom)
+            ->orderByDesc('effective_from')
+            ->first();
+
+        if ($previous && ($previous->effective_until === null || $previous->effective_until->toDateString() >= $effectiveFrom)) {
+            $previous->update([
+                'effective_until' => CarbonImmutable::parse($effectiveFrom, 'Asia/Manila')->subDay()->toDateString(),
+            ]);
+        }
+
+        $next = PersonnelCompensationTerm::query()
+            ->where('personnel_id', $personnel->id)
+            ->whereDate('effective_from', '>', $effectiveFrom)
+            ->orderBy('effective_from')
+            ->first();
+
+        $effectiveUntil = $next
+            ? $next->effective_from->subDay()->toDateString()
+            : null;
+
+        // Use whereDate rather than an exact equality match. SQLite stores Eloquent date casts
+        // as midnight timestamps in tests while MySQL DATE columns store YYYY-MM-DD. The unique
+        // key is date-based in both environments, so an exact updateOrCreate lookup can miss the
+        // existing row in SQLite and then attempt a duplicate insert.
+        $term = PersonnelCompensationTerm::query()
+            ->where('personnel_id', $personnel->id)
+            ->whereDate('effective_from', $effectiveFrom)
+            ->first();
+
+        $attributes = [
+            'business_id' => $actor->business_id,
+            'effective_until' => $effectiveUntil,
+            'compensation_rule_reference_id' => $ruleId,
+            'hourly_rate' => $personnel->hourly_rate,
+            'ot_entitled' => $personnel->ot_entitled,
+            'ot_multiplier' => $personnel->ot_multiplier,
+            'guaranteed_daily_pay' => $personnel->guaranteed_daily_pay,
+        ];
+
+        if ($term) {
+            $term->update($attributes);
+            return;
+        }
+
+        PersonnelCompensationTerm::query()->create(array_merge($attributes, [
+            'personnel_id' => $personnel->id,
+            'effective_from' => $effectiveFrom,
+            'created_by' => $actor->id,
+        ]));
     }
 
     private function refPayload($reference): ?array

@@ -24,7 +24,7 @@ class AuthController extends Controller
         $username = $request->string('username')->toString();
         $accessCode = $request->string('access_code')->toString();
 
-        $user = User::query()->with(['role.permissions', 'business', 'defaultBranch'])
+        $user = User::query()->with(['role.permissions', 'business', 'defaultBranch', 'personnel.compensationRule'])
             ->whereRaw('LOWER(username) = ?', [$username])
             ->first();
 
@@ -101,14 +101,14 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login successful.',
-            'user' => $this->presentUser($user->fresh(['role.permissions', 'business', 'defaultBranch'])),
+            'user' => $this->presentUser($user->fresh(['role.permissions', 'business', 'defaultBranch', 'personnel.compensationRule'])),
         ]);
     }
 
     public function me(Request $request): JsonResponse
     {
         return response()->json([
-            'user' => $this->presentUser($request->user()->load(['role.permissions', 'business', 'defaultBranch'])),
+            'user' => $this->presentUser($request->user()->load(['role.permissions', 'business', 'defaultBranch', 'personnel.compensationRule'])),
         ]);
     }
 
@@ -138,7 +138,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Access Code updated successfully.',
-            'user' => $this->presentUser($user->fresh(['role.permissions', 'business', 'defaultBranch'])),
+            'user' => $this->presentUser($user->fresh(['role.permissions', 'business', 'defaultBranch', 'personnel.compensationRule'])),
         ]);
     }
 
@@ -185,6 +185,14 @@ class AuthController extends Controller
             'default_branch' => $user->defaultBranch ? [
                 'code' => $user->defaultBranch->code,
                 'name' => $user->defaultBranch->name,
+            ] : null,
+            'personnel' => $user->personnel ? [
+                'id' => $user->personnel->id,
+                'code' => $user->personnel->code,
+                'name' => $user->personnel->full_name,
+                'compensation_rule' => $user->personnel->compensationRule?->code,
+                'has_operational_compensation' => strtoupper((string) ($user->personnel->compensationRule?->code ?? 'NONE')) !== 'NONE',
+                'paid_leave_entitled' => (bool) $user->personnel->paid_leave_entitled,
             ] : null,
             'permissions' => $user->permissionCodes(),
         ];

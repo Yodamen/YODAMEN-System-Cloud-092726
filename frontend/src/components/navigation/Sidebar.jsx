@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { navigationSections } from './navigationConfig'
 import { useAuth } from '../../context/AuthContext'
 
@@ -16,28 +16,46 @@ function itemAbbreviation(label) {
 }
 
 export default function Sidebar({ collapsed, onToggle }) {
-  const { hasPermission, user, logout } = useAuth()
+  const { hasPermission, user, logout, bootstrap } = useAuth()
   const location = useLocation()
   const [loggingOut, setLoggingOut] = useState(false)
 
   const visibleSections = useMemo(() => navigationSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => hasPermission(item.module, 'VIEW')),
+      items: section.items.filter((item) => {
+        if (!hasPermission(item.module, 'VIEW')) return false
+        if (item.requiresSuperAdmin && !user?.role?.is_super_admin) return false
+        if (item.requiresOperationalCompensation && !user?.personnel?.has_operational_compensation) return false
+        return true
+      }),
     }))
-    .filter((section) => section.items.length), [hasPermission])
+    .filter((section) => section.items.length), [hasPermission, user?.personnel?.has_operational_compensation, user?.role?.is_super_admin])
+
+  const activeItemPath = useMemo(() => {
+    const matches = visibleSections
+      .flatMap((section) => section.items)
+      .filter((item) => itemMatchesPath(item, location.pathname))
+      .sort((a, b) => String(b.path || '').length - String(a.path || '').length)
+
+    return matches[0]?.path || null
+  }, [location.pathname, visibleSections])
 
   const activeSection = useMemo(() => {
-    const match = visibleSections.find((section) => section.items.some((item) => itemMatchesPath(item, location.pathname)))
+    const match = visibleSections.find((section) => section.items.some((item) => item.path === activeItemPath))
     return match?.label || 'Main'
-  }, [location.pathname, visibleSections])
+  }, [activeItemPath, visibleSections])
 
   const [openSection, setOpenSection] = useState(() => (activeSection === 'Main' ? null : activeSection))
 
   useEffect(() => {
-    if (activeSection !== 'Main') {
+    if (activeSection === 'Main') return undefined
+
+    const timeoutId = window.setTimeout(() => {
       setOpenSection(activeSection)
-    }
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
   }, [activeSection])
 
   async function handleLogout() {
@@ -59,15 +77,15 @@ export default function Sidebar({ collapsed, onToggle }) {
 
     if (item.enabled) {
       return (
-        <NavLink
-          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+        <Link
+          className={`nav-item ${item.path === activeItemPath ? 'active' : ''}`}
           key={`${sectionLabel}-${item.label}`}
           to={item.path}
-          end={item.path === '/'}
+          aria-current={item.path === activeItemPath ? 'page' : undefined}
           title={collapsed ? item.label : undefined}
         >
           {content}
-        </NavLink>
+        </Link>
       )
     }
 
@@ -86,13 +104,23 @@ export default function Sidebar({ collapsed, onToggle }) {
 
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
-      <div className="sidebar-brand">
-        <div className="brand-mark small">Y</div>
-        {!collapsed && (
-          <div>
-            <strong>YODAMEN</strong>
-            <span>Management System</span>
-          </div>
+      <div className={`sidebar-brand ${bootstrap?.branding?.logo_url ? 'has-logo' : ''}`}>
+        {bootstrap?.branding?.logo_url ? (
+          <img
+            className={`sidebar-brand-logo ${collapsed ? 'compact' : 'wide'}`}
+            src={bootstrap.branding.logo_url}
+            alt={bootstrap.branding.business_display_name || 'Business logo'}
+          />
+        ) : (
+          <>
+            <div className="brand-mark small">{String(bootstrap?.branding?.business_display_name || 'Y').charAt(0).toUpperCase()}</div>
+            {!collapsed && (
+              <div>
+                <strong>{bootstrap?.branding?.business_display_name || 'YODAMEN'}</strong>
+                <span>{bootstrap?.branding?.system_name || 'Management System'}</span>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -103,21 +131,17 @@ export default function Sidebar({ collapsed, onToggle }) {
 
           return (
             <div className={`nav-section ${isOpen ? 'open' : 'closed'}`} key={section.label}>
-              {!collapsed && (
-                isMain ? (
-                  <div className="nav-section-label nav-section-label-static">{section.label}</div>
-                ) : (
-                  <button
-                    className="nav-section-toggle"
-                    type="button"
-                    onClick={() => setOpenSection((current) => (current === section.label ? null : section.label))}
-                    aria-expanded={isOpen}
-                  >
-                    <span>{section.label}</span>
-                    <span className="nav-section-chevron" aria-hidden="true">{isOpen ? '⌃' : '⌄'}</span>
-                  </button>
-                )
-              )}
+              {!collapsed && !isMain ? (
+                <button
+                  className="nav-section-toggle"
+                  type="button"
+                  onClick={() => setOpenSection((current) => (current === section.label ? null : section.label))}
+                  aria-expanded={isOpen}
+                >
+                  <span>{section.label}</span>
+                  <span className="nav-section-chevron" aria-hidden="true">{isOpen ? '⌃' : '⌄'}</span>
+                </button>
+              ) : null}
 
               {isOpen ? (
                 <div className="nav-section-items">
@@ -140,8 +164,8 @@ export default function Sidebar({ collapsed, onToggle }) {
             <span>{user?.role?.name}</span>
           </div>
           <div className="sidebar-footer-system">
-            <strong>YODAMEN</strong>
-            <span>Grooming Lounge</span>
+            <strong>{bootstrap?.branding?.business_display_name || 'YODAMEN'}</strong>
+            <span>{bootstrap?.branding?.subtitle || bootstrap?.business?.name || 'Grooming Lounge'}</span>
           </div>
           <button className="sidebar-logout-button" type="button" onClick={handleLogout} disabled={loggingOut}>
             {loggingOut ? 'Logging out...' : 'Logout'}

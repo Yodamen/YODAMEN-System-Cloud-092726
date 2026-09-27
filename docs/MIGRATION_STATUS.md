@@ -183,9 +183,59 @@ Status: **IMPLEMENTED PACKAGE, awaiting local lint/build/tests/UI acceptance.**
 
 Refines Advance Payment modal sizing, restores legacy-style user/access identity blocks, adds payment visibility across Booking/Queue/Servicing, reorganizes Queue references, adds inline New Customer shortcuts to Booking/Walk-In creation, and removes Branch from the Booking list display. Payment indicators are projections from the immutable Payment ledger rather than duplicated operational state.
 
-## Phase 3A parity / UI correction 02
-Status: **IMPLEMENTED PACKAGE, awaiting local lint/build/tests/UI acceptance.**
 
-Adds the full legacy Customer filter panel (Search, Status, Birth Month, Last Visit, Lifetime Value, Reset) and activates Customer visit/LTV projections now that Visit and Payment ledgers exist. Standardizes table spacing across active modules, replaces native browser confirmations with branded YODAMEN confirmation modals, makes Booking ID the leading reference column across Bookings/Servicing/Transactions (and immediately after queue sequence in Queuing), removes Servicing Check-In as a standalone column, exposes actual Services in Pending Transactions, applies proper-case Booking Source display, and removes duplicate Advance Payment Notes inputs from Booking/Walk-In forms.
+## Phase 4 - Payment Allocation + Checkout Finalization
+Status: **IMPLEMENTED PACKAGE, awaiting local migration/tests/UI acceptance.**
 
-No database migration is required for this correction.
+Includes:
+
+- normalized `payment_applications` settlement ledger
+- cached Sale/Sale Item applied/balance totals reconciled transactionally
+- manual Advance allocation across current Sale lines
+- immutable Checkout Payment receipt
+- explicit `Allow Remaining Balance` control for On Account finalization
+- atomic Sale financial finalization
+- line-level `PAID`, `ON_ACCOUNT`, and `SERVICE_CREDIT` settlement classifications
+- finalized Transactions tabs based on Sale Items rather than parent Sale status
+- later On Account Collection payments and manual line allocation
+- line movement from On Account to Paid when settled
+- request idempotency for checkout finalization and collections
+- audit events for checkout finalization and later collections
+
+Boundary retained: Package Balance targets and Service Credit financial redirection remain for the Package/Service Credit phase. Commission posting remains deferred to the Commission phase, although financial finalization now provides the authoritative eligibility boundary.
+
+## Phase 4 UX / On Account redesign 01
+Status: **IMPLEMENTED PACKAGE, awaiting local migration/tests/UI acceptance.**
+
+The Phase 4 settlement UX was simplified after user review. Checkout no longer asks for a duplicate Amount Collected Now field; the amount of new money is derived from service-line `Payment Now` allocations. Existing Advance is preallocated automatically and remains editable when a multi-line transaction needs manual distribution.
+
+The row-level On Account `Collect` workflow is retired from the React UI and API routes. Later receipts are now handled through a customer-based **Interim Payment** workflow. Staff selects a customer, the system pulls all finalized On Account bookings/service-line balances for that customer, and one receipt can be allocated across one or more Booking obligations. The immutable Payment remains one cash receipt while Payment Applications preserve the exact Booking/Sale/line destinations.
+
+`payments.booking_id` becomes nullable for a cross-booking Interim Payment header. Every allocation is still linked to a specific Sale and therefore its Booking/Walk-In schedule through `payment_applications.sale_id -> sales.booking_id`.
+
+## Phase 4 final cleanup - Booking-linked Interim Payments
+
+The standalone Transactions-page Interim Payment action is retired. A new customer receipt collected while creating a Booking or Walk-In is explicitly classified as either:
+
+- `ADVANCE`: belongs to the newly created Booking and remains available for that Booking's future Sale.
+- `INTERIM`: belongs to the newly created Booking as the collection context, but is immediately applied through Payment Applications to the same customer's older finalized `ON_ACCOUNT` service lines.
+
+When a customer is selected in New Booking or New Walk-In, the UI checks for active On Account balances. If balances exist, Interim Payment is selected by default and the open Booking/service balances are shown for allocation. Staff may deliberately change the collection type to Advance when the money is intended for the new Booking instead.
+
+The Transactions On Account tab remains a read-only settlement view. There is no standalone `Receive Interim Payment` action there.
+
+
+## Phase 4 split Booking/Walk-In receipt refinement 04
+
+A new Booking or Walk-In may now receive one cash receipt that is split between an **Advance Reserve** for the new Booking and **Interim Settlement** of older On Account balances for the same customer. The system stores one immutable Payment header and multiple purpose-specific Payment Applications. `payment_applications.sale_id` is nullable for Booking-level Advance Reserve rows and `target_booking_id` identifies the Booking receiving the reserve. Mixed receipts use `payments.payment_type = MIXED`. Checkout consumes only the Advance Reserve for its own Booking; older Interim allocations remain permanently tied to their original Sale Items.
+
+## Phase 5A - Package / Service Credit Foundation
+Status: **IMPLEMENTED PACKAGE, awaiting local migration/tests/UI acceptance.**
+
+Phase 5A activates the enrollment-level package foundation required before Service Credit redemption is finalized. Multi-session master services now create `NEW_PACKAGE` operational lines automatically and one purchase-level Package Enrollment per transaction line. Package identity is propagated Booking -> Queue -> Visit -> Sale Item without cumulative customer/service stacking.
+
+The first rendered session of a newly purchased package is recorded before financial activation. Financial finalization activates the package regardless of whether the package is fully paid or remains On Account, then issues one enrollment-specific Service Credit with the completed purchase session already recognized as used. Payment status and session entitlement remain independent.
+
+Service Balances is now active as a read-only Operations module with one row per Package Enrollment. It exposes purchased, used and remaining sessions plus package-level Collected and Balance. Package financial detail derives money from received Payment Applications rather than cached package totals.
+
+Phase 5A does **not** yet allow selecting an existing Service Credit in Booking/Walk-In or consuming a later credit session. That operational redemption and package-balance payment redirection belongs to Phase 5B. Advance / Interim / Checkout collection rules remain a working foundation and will be finalized together with Phase 5B settlement behavior.

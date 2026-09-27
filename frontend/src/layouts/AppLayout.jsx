@@ -3,6 +3,8 @@ import { Outlet } from 'react-router-dom'
 import Sidebar from '../components/navigation/Sidebar'
 import AccessCodeResetModal from '../features/auth/AccessCodeResetModal'
 import { useAuth } from '../context/AuthContext'
+import { brandingCssVariables } from '../utils/branding'
+import PageReportExport from '../components/reports/PageReportExport'
 
 function userInitial(name) {
   const value = String(name || '').trim()
@@ -10,11 +12,11 @@ function userInitial(name) {
 }
 
 export default function AppLayout() {
-  const { user } = useAuth()
+  const { user, bootstrap } = useAuth()
   const [collapsed, setCollapsed] = useState(false)
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" style={brandingCssVariables(bootstrap?.branding)}>
       <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((value) => !value)} />
 
       <div className="app-main">
@@ -30,6 +32,7 @@ export default function AppLayout() {
         </header>
 
         <main className="content-area">
+          <PageReportExport />
           <Outlet />
         </main>
       </div>

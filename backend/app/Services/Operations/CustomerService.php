@@ -28,6 +28,15 @@ class CustomerService
             abort(404);
         }
 
+        if (! $customer && (bool) ($data['is_test_customer'] ?? false) && ! $actor->isSuperAdmin()) {
+            throw new DomainException('Only Super Admin can mark a customer as Test Customer.');
+        }
+
+        if ($customer && array_key_exists('is_test_customer', $data)
+            && (bool) $data['is_test_customer'] !== (bool) $customer->is_test_customer) {
+            throw new DomainException('Test Customer classification is fixed at customer creation.');
+        }
+
         return DB::transaction(function () use ($actor, $data, $customer) {
             $mobileNumber = $this->nullableTrim($data['mobile_number'] ?? null);
             $mobileNormalized = $mobileNumber ? $this->normalizeMobile($mobileNumber) : null;
@@ -106,6 +115,9 @@ class CustomerService
                 'address' => $this->nullableTrim($data['address'] ?? null),
                 'lead_source_reference_id' => $leadSourceId,
                 'registration_date' => $registrationDate,
+                'is_test_customer' => $customer->exists
+                    ? (bool) $customer->is_test_customer
+                    : ($actor->isSuperAdmin() && (bool) ($data['is_test_customer'] ?? false)),
                 'notes' => $this->nullableTrim($data['notes'] ?? null),
                 'updated_by' => $actor->id,
             ]);
@@ -178,6 +190,7 @@ class CustomerService
             'lead_source_code' => $customer->leadSource?->code,
             'registration_date' => $customer->registration_date?->format('Y-m-d'),
             'status' => $customer->status,
+            'is_test_customer' => (bool) $customer->is_test_customer,
             'notes' => $customer->notes,
         ];
     }

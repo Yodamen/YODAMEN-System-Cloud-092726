@@ -56,14 +56,6 @@ class MasterDataSeeder extends Seeder
                 ],
             ],
             [
-                'code' => 'CUSTOMER_TYPE',
-                'name' => 'Customer Type',
-                'values' => [
-                    ['NEW', 'New'],
-                    ['RETURNEE', 'Returnee'],
-                ],
-            ],
-            [
                 'code' => 'GENDER',
                 'name' => 'Gender',
                 'values' => [

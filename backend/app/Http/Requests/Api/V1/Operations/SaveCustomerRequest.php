@@ -24,6 +24,7 @@ class SaveCustomerRequest extends FormRequest
             'lead_source_code' => ['nullable', 'string', 'max:100'],
             'registration_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:5000'],
+            'is_test_customer' => ['sometimes', 'boolean'],
         ];
     }
 }

@@ -29,7 +29,7 @@ Legend: `DONE` target behavior implemented; `VALIDATE` implemented but pending u
 | Visit / Servicing | `BookingVisits.js`, `QueueVisitSetup.js`, Servicing UI | VALIDATE | VALIDATE | VALIDATE | ServicingTest | VALIDATE |
 | Sales creation | `Sales.js` | VALIDATE | VALIDATE | VALIDATE | Sales core tests | VALIDATE |
 | Payment ledger | `Sales.js` | VALIDATE | VALIDATE | VALIDATE | Sales core tests | VALIDATE |
-| Payment allocation | `ServicingPaymentAllocation.js` | PLANNED | PLANNED | PLANNED | allocation | PLANNED |
+| Payment allocation | `ServicingPaymentAllocation.js` | VALIDATE | VALIDATE | VALIDATE | CheckoutSettlementTest | VALIDATE |
 | Package Enrollment | Service Credit sources | PLANNED | PLANNED | PLANNED | package | PLANNED |
 | Service Credits | `ServiceCredit.js` | PLANNED | PLANNED | PLANNED | package/credit | PLANNED |
 | Service Balances | `ServiceBalanceFinancial2026.js` | PLANNED | PLANNED | PLANNED | financial | PLANNED |
@@ -129,16 +129,51 @@ Legend: `DONE` target behavior implemented; `VALIDATE` implemented but pending u
 | Servicing Payment | Advance amount projection or Unpaid | Implemented |
 | New Customer shortcut | Available inside New Booking and New Walk-In | Implemented |
 
-## Phase 3A Parity Correction 02
 
+## Phase 4 additions
+| Legacy area | Laravel/MySQL | React | Tests | Status |
+|---|---|---|---|---|
+| Payment Applications | `payment_applications` append-style settlement ledger | allocation inputs in Checkout/Collection | CheckoutSettlementTest | Implemented, awaiting local acceptance |
+| Advance allocation | manual current-sale line allocation | Checkout modal | CheckoutSettlementTest | Implemented |
+| Checkout payment | immutable `CHECKOUT` Payment | Amount Collected Now + method/reference | CheckoutSettlementTest | Implemented |
+| Financial finalization | atomic Sale/Sale Item reconciliation | Finalize Checkout | CheckoutSettlementTest | Implemented |
+| Paid / On Account line tabs | line-level settlement query | Transactions tabs | CheckoutSettlementTest | Implemented |
+| On Account collection | immutable `COLLECTION` Payment + applications | Collection modal | CheckoutSettlementTest | Implemented |
+| Duplicate checkout protection | request idempotency + Payment idempotency + SQL constraints | submit lock | CheckoutSettlementTest | Implemented |
+| Service Credit package settlement | deferred to Package/Service Credit phase | tab remains empty unless legacy data exists | Pending | Correctly deferred |
+| Commission posting | deferred to Commission phase; financial finalization boundary now exists | n/a | Pending | Correctly deferred |
+
+## Phase 4 UX / On Account redesign 01
 | Area | Target behavior | Status |
 |---|---|---|
-| Customer filters | Search / Status / Birth Month / Last Visit / Lifetime Value / Reset | Implemented |
-| Customer metrics | Completed Visits, Last Visit and actual collected Lifetime Value | Implemented from Visit + Sale/Payment ledgers |
-| Global table spacing | Compact balanced columns; money/action columns shrink to content | Implemented |
-| Confirmation dialogs | Branded modal instead of browser-native confirm | Implemented for Booking Check-In, Queue Start Servicing and Service Completion |
-| Booking ID placement | Leading identifier column; queue retains sequence before it | Implemented |
-| Booking Source | Proper capitalization | Implemented |
-| Servicing columns | Standalone Check-In removed | Implemented |
-| Transactions Pending | Services names replace item count | Implemented |
-| Booking / Walk-In Advance | Duplicate payment Notes field removed | Implemented |
+| Checkout UX | Payment Now amount derived from service-line allocations; no duplicate amount entry | Implemented, awaiting local acceptance |
+| Existing Advance | Auto-preallocated, editable for multi-line allocation | Implemented |
+| On Account list | Read-only settlement lines; no row-level Collect button | Implemented |
+| Interim Payment | Customer-based receipt allocation across open On Account bookings | Implemented |
+| Payment ledger | One immutable receipt can settle multiple Booking obligations via applications | Implemented |
+| Booking traceability | Every Interim Payment application maps to target Sale -> Booking | Implemented |
+| Idempotency | Interim receipt protected by customer-scoped idempotency | Implemented |
+
+## Phase 4 final cleanup
+
+| Workflow | Target behavior | Status |
+|---|---|---|
+| Booking payment collection | Explicit `ADVANCE` or `INTERIM` type | Implemented |
+| Walk-In payment collection | Explicit `ADVANCE` or `INTERIM` type | Implemented |
+| On Account detection | Selecting customer loads active finalized On Account Booking/service balances | Implemented |
+| Interim source traceability | Payment header links to newly created Booking/Walk-In | Implemented |
+| Interim settlement traceability | Payment Applications link to older target Sale/Booking/service lines | Implemented |
+| Transactions On Account | Read-only settlement view; no standalone Receive Interim Payment action | Implemented |
+| Checkout final UI labels | `Collected`, `Balance`, `Checkout Payment`; redundant headings removed | Implemented |
+
+## Phase 5A additions
+| Legacy area | Laravel/MySQL | React | Tests | Status |
+|---|---|---|---|---|
+| Multi-session package purchase | `package_enrollments`, one row per purchase | automatic from multi-session service selection | PackageServiceCreditTest | Implemented, awaiting local acceptance |
+| Package lineage | Booking/Queue/Visit/Sale Item foreign keys to Package Enrollment | transparent operational lineage | PackageServiceCreditTest | Implemented |
+| Pending first session | append-only `PENDING_PACKAGE_SERVICE` movement | reflected in Service Balances | PackageServiceCreditTest | Implemented |
+| Package activation | financial finalization issues one enrollment-specific `service_credits` row | no extra activation action | PackageServiceCreditTest | Implemented |
+| Separate repeat purchases | no cumulative stacking across purchases | one Service Balance row per enrollment | PackageServiceCreditTest | Implemented |
+| Service Balances | enrollment-level session and financial read model | active Operations page + package detail modal | PackageServiceCreditTest | Implemented |
+| Existing Service Credit redemption | deferred to Phase 5B | not selectable yet | Pending | Correctly deferred |
+| Package-balance payment redirection | target model reserved in Payment Applications | deferred to Phase 5B | Pending | Correctly deferred |

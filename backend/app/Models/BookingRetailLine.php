@@ -14,9 +14,13 @@ class BookingRetailLine extends Model
         'booking_id',
         'code',
         'legacy_retail_item_code',
+        'retail_product_id',
+        'sku_snapshot',
         'item_name_snapshot',
         'quantity',
         'unit_price_snapshot',
+        'assigned_personnel_id',
+        'assigned_personnel_name_snapshot',
         'notes',
         'sort_order',
         'created_by',
@@ -35,5 +39,15 @@ class BookingRetailLine extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    public function retailProduct(): BelongsTo
+    {
+        return $this->belongsTo(RetailProduct::class, 'retail_product_id');
+    }
+
+    public function assignedPersonnel(): BelongsTo
+    {
+        return $this->belongsTo(Personnel::class, 'assigned_personnel_id');
     }
 }

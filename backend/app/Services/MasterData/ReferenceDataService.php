@@ -53,6 +53,7 @@ class ReferenceDataService
                     'is_system' => false,
                     'active' => true,
                     'created_by' => $actor->id,
+                    'metadata' => $this->normalizedMetadata($group, $data),
                     'updated_by' => $actor->id,
                 ]);
             } catch (QueryException $exception) {
@@ -95,12 +96,17 @@ class ReferenceDataService
             throw new DomainException('System reference codes are fixed. You may change the display value only.');
         }
 
+        $metadata = $value->is_system && strtoupper((string) $targetGroup->code) === WorkflowReasonCatalog::GROUP_CODE
+            ? $value->metadata
+            : $this->normalizedMetadata($targetGroup, $data, $value->metadata);
+
         try {
             $value->update([
                 'reference_group_id' => $targetGroup->id,
                 'code' => strtoupper(trim($data['code'])),
                 'display_value' => trim($data['display_value']),
                 'sort_order' => (int) ($data['sort_order'] ?? 0),
+                'metadata' => $metadata,
                 'updated_by' => $actor->id,
             ]);
         } catch (QueryException $exception) {
@@ -165,6 +171,28 @@ class ReferenceDataService
             'sort_order' => $value->sort_order,
             'is_system' => $value->is_system,
             'active' => $value->active,
+            'metadata' => $value->metadata,
         ];
     }
+
+    private function normalizedMetadata(ReferenceGroup $group, array $data, ?array $existing = null): ?array
+    {
+        if (strtoupper((string) $group->code) !== WorkflowReasonCatalog::GROUP_CODE) {
+            return $existing;
+        }
+
+        $contexts = collect($data['metadata']['contexts'] ?? [])
+            ->map(fn ($context) => strtoupper(trim((string) $context)))
+            ->filter(fn ($context) => WorkflowReasonCatalog::validContext($context))
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($contexts === []) {
+            throw new DomainException('Select at least one applicable workflow for a standardized reason.');
+        }
+
+        return ['contexts' => $contexts];
+    }
+
 }

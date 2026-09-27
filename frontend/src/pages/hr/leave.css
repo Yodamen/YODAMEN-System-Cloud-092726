@@ -1,0 +1,169 @@
+
+.leave-summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.leave-balance-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.leave-balance-card { border:1px solid var(--border); border-radius:10px; padding:12px; background:#fff; }
+.leave-balance-card span,.leave-balance-card strong,.leave-balance-card small { display:block; }
+.leave-balance-card span { color:var(--muted); font-size:.7rem; font-weight:800; }
+.leave-balance-card strong { margin-top:5px; font-size:1.1rem; }
+.leave-balance-card small { margin-top:4px; color:var(--muted); font-size:.65rem; }
+.leave-form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.leave-form-grid .span-3 { grid-column:1 / -1; }
+.leave-status-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.leave-request-type { font-weight:800; }
+.leave-generated-override { display:grid; grid-template-columns:150px 130px minmax(180px,1fr); gap:8px; align-items:center; padding:9px 10px; border:1px solid #d9e4f2; background:#f7faff; border-radius:8px; }
+.leave-generated-override .status-pill { width:max-content; }
+.legend-dot.leave { background:#b18bd8; }
+.attendance-calendar-day.leave { background:#f0e5fa; border-color:#c2a3df; }
+.calendar-request-note { font-size:.64rem; margin-top:4px; color:#6a4f86; }
+@media(max-width:950px){.leave-summary-grid,.leave-balance-grid,.leave-form-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:650px){.leave-summary-grid,.leave-balance-grid,.leave-form-grid{grid-template-columns:1fr}.leave-form-grid .span-3{grid-column:auto}.leave-generated-override{grid-template-columns:1fr}}
+
+/* Update 72: streamlined employee Leave / Day Off self-service */
+.compact-section-heading {
+  margin-bottom: 10px;
+}
+
+.self-service-balance-card,
+.self-service-request-card {
+  gap: 10px;
+}
+
+.leave-balance-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.leave-balance-item {
+  display: grid;
+  gap: 3px;
+  min-width: 150px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.leave-balance-item span {
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 800;
+}
+
+.leave-balance-item strong {
+  font-size: .82rem;
+}
+
+.self-service-request-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: end;
+}
+
+.self-service-reason-field {
+  grid-column: 1 / -1;
+}
+
+.self-service-reason-field textarea {
+  min-height: 62px;
+}
+
+.self-service-request-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.self-service-request-actions .primary-button {
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+.day-off-request-form {
+  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+}
+
+.day-off-request-form .day-off-date-field {
+  grid-column: 1;
+}
+
+.day-off-request-form .self-service-reason-field {
+  grid-column: 2;
+}
+
+.day-off-request-form .self-service-request-actions {
+  grid-column: 1 / -1;
+}
+
+.request-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.request-detail-grid > div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.request-detail-grid span {
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.request-detail-grid strong {
+  font-size: .78rem;
+  font-weight: 700;
+}
+
+.request-detail-wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .self-service-request-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .self-service-request-form,
+  .day-off-request-form,
+  .request-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .self-service-reason-field,
+  .self-service-request-actions,
+  .day-off-request-form .day-off-date-field,
+  .day-off-request-form .self-service-reason-field,
+  .day-off-request-form .self-service-request-actions,
+  .request-detail-wide {
+    grid-column: auto;
+  }
+}
+
+/* Update 92: leave balance layout */
+.leave-balance-view-button {
+  width: auto !important;
+  min-width: 58px !important;
+  max-width: fit-content;
+  padding: 6px 12px !important;
+}
+
+.leave-balance-table th,
+.leave-balance-table td {
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.leave-balance-table th:first-child,
+.leave-balance-table td:first-child {
+  width: 34%;
+}

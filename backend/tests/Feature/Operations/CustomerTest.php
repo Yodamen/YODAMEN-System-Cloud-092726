@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Customer;
+use App\Models\DiscountRule;
 use App\Models\ReferenceGroup;
 use Database\Seeders\FoundationSeeder;
 use Database\Seeders\MasterDataSeeder;
@@ -138,4 +139,74 @@ it('toggles customer status without deleting the customer', function () {
         ->assertJsonPath('customer.status', 'INACTIVE');
 
     expect($customer->fresh()->status)->toBe('INACTIVE');
+});
+
+
+it('filters the customer module by promo code using customer eligibility criteria', function () {
+    $user = foundationUser();
+
+    $qualified = Customer::query()->create([
+        'business_id' => $user->business_id,
+        'code' => 'CUS-PROMO-001',
+        'first_name' => 'Qualified',
+        'last_name' => 'Customer',
+        'registration_date' => '2026-09-18',
+        'status' => 'ACTIVE',
+    ]);
+
+    Customer::query()->create([
+        'business_id' => $user->business_id,
+        'code' => 'CUS-PROMO-002',
+        'first_name' => 'Other',
+        'last_name' => 'Customer',
+        'registration_date' => '2026-09-18',
+        'status' => 'ACTIVE',
+    ]);
+
+    DiscountRule::query()->create([
+        'business_id' => $user->business_id,
+        'code' => 'DSR-PROMO-001',
+        'rule_name' => 'Specific Customer Promo',
+        'discount_code' => 'TARGET10',
+        'applies_to' => 'CUSTOMER',
+        'customer_id' => $qualified->id,
+        'item_scope' => 'ALL',
+        'calculation_type' => 'PERCENTAGE',
+        'rate_value' => 10,
+        'effective_from' => '2000-01-01',
+        'effective_until' => null,
+        'priority' => 0,
+        'status' => 'ACTIVE',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->getJson('/api/v1/operations/customers?promo_code=target10')
+        ->assertOk()
+        ->assertJsonPath('promo_filter.code', 'TARGET10')
+        ->assertJsonPath('promo_filter.found', true)
+        ->assertJsonPath('promo_filter.qualified_customer_count', 1)
+        ->assertJsonCount(1, 'customers');
+
+    expect($response->json('customers.0.id'))->toBe($qualified->id);
+});
+
+it('returns an empty customer result when the promo code has no active effective rule', function () {
+    $user = foundationUser();
+
+    Customer::query()->create([
+        'business_id' => $user->business_id,
+        'code' => 'CUS-PROMO-003',
+        'first_name' => 'Sample',
+        'last_name' => 'Customer',
+        'registration_date' => '2026-09-18',
+        'status' => 'ACTIVE',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/operations/customers?promo_code=NOTACTIVE')
+        ->assertOk()
+        ->assertJsonPath('promo_filter.code', 'NOTACTIVE')
+        ->assertJsonPath('promo_filter.found', false)
+        ->assertJsonPath('promo_filter.qualified_customer_count', 0)
+        ->assertJsonCount(0, 'customers');
 });

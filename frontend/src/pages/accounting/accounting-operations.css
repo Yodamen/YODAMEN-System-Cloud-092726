@@ -1,0 +1,130 @@
+.accounting-ops-metrics { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.accounting-ops-filters { display:flex; align-items:end; gap:10px; flex-wrap:wrap; }
+.accounting-ops-filters .form-field { min-width:180px; max-width:260px; flex:1; }
+.accounting-filter-button { min-height:36px; }
+.inline-actions { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+.accounting-ops-wide-modal.modal-card.wide { width:min(1420px, calc(100vw - 32px)); max-width:1420px; }
+.accounting-ops-section-heading { display:flex; justify-content:space-between; align-items:center; gap:12px; margin:18px 0 8px; }
+.accounting-recon-lines { overflow-x:auto; padding-bottom:4px; }
+.accounting-recon-header,.accounting-recon-line { min-width:1180px; display:grid; grid-template-columns:100px 150px minmax(220px,1fr) 150px 130px 250px 90px; gap:8px; align-items:center; }
+.accounting-recon-header { font-size:.64rem; font-weight:800; color:var(--muted); text-transform:uppercase; padding:0 2px 6px; }
+.accounting-recon-line { margin-bottom:8px; }
+.accounting-recon-line input,.accounting-recon-line select,.accounting-page td select { width:100%; min-height:34px; border:1px solid var(--border); border-radius:7px; background:#fff; padding:6px 8px; font:inherit; }
+@media (max-width:800px){ .accounting-ops-filters{display:grid;grid-template-columns:1fr 1fr}.accounting-ops-wide-modal.modal-card.wide{width:calc(100vw - 18px)} }
+
+/* Accounts Payable */
+.ap-payment-splits { display:grid; gap:8px; }
+.ap-payment-split-row { display:grid; grid-template-columns:minmax(220px,1.35fr) 150px minmax(220px,1fr) 90px; gap:8px; align-items:end; }
+.ap-payment-split-row .form-field { min-width:0; margin:0; }
+.ap-payment-split-row .compact-button { width:100%; min-height:40px; }
+.ap-payment-summary { margin-top:14px; display:grid; grid-template-columns:1fr auto; gap:6px 18px; border-top:1px solid var(--border); padding-top:12px; }
+.ap-payment-summary strong { text-align:right; }
+@media (max-width:800px){ .ap-payment-split-row{grid-template-columns:1fr;} }
+
+/* Update 100K7C: sleek accounting KPI strip */
+.accounting-ops-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.accounting-ops-metrics .metric-card {
+  min-height: 62px;
+  padding: 9px 11px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: #fff;
+}
+.accounting-ops-metrics .metric-card:last-child { border-right: 0; }
+.accounting-ops-metrics .metric-card span {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.accounting-ops-metrics .metric-card strong {
+  margin-top: 3px;
+  font-size: 14px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.accounting-ops-metrics .metric-card small { margin-top: 3px; }
+
+@media (max-width: 900px) {
+  .accounting-ops-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .accounting-ops-metrics .metric-card { border-bottom: 1px solid var(--border); }
+}
+@media (max-width: 560px) {
+  .accounting-ops-metrics { grid-template-columns: 1fr; }
+  .accounting-ops-metrics .metric-card { border-right: 0; }
+}
+
+/* 100K7M AR/AP summary layout */
+.accounting-aging-metrics{grid-template-columns:repeat(5,minmax(0,1fr))}.accounting-ap-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.metric-label-row{display:flex;align-items:center;gap:7px;min-width:0}.metric-label-row>span:first-child{min-width:0}.ap-ledger-badge{display:inline-flex;align-items:center;min-height:18px;padding:1px 6px;border-radius:999px;background:#f1f2f4;color:#666;font-size:9px;font-weight:700;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}.ap-ledger-badge.success{background:#eef7f1;color:#34704a}.ap-ledger-badge.warning{background:#fff6e6;color:#8a641f}.ap-ledger-badge.neutral{background:#f1f2f4;color:#666}@media(max-width:1100px){.accounting-aging-metrics,.accounting-ap-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.accounting-aging-metrics,.accounting-ap-metrics{grid-template-columns:1fr}}
+
+/* 100K7M CASH DEPOSITS */
+.cash-deposit-due-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}.cash-deposit-due-strip>div{display:grid;gap:4px;padding:12px 14px;border:1px solid var(--border-color,#e5e7eb);border-radius:12px;background:var(--surface-muted,#fafafa)}.cash-deposit-due-strip span{font-size:.76rem;color:var(--text-muted,#6b7280)}.cash-deposit-due-strip strong{font-size:1.05rem}@media(max-width:760px){.cash-deposit-due-strip{grid-template-columns:1fr}}
+
+
+/* 100K7N1 AR/AP two-row aging layout */
+@media (min-width:1101px){
+  .accounting-aging-metrics,.accounting-ap-metrics{grid-template-columns:repeat(4,minmax(0,1fr));}
+  .accounting-aging-metrics .accounting-summary-primary{grid-column:1 / -1;border-right:0;border-bottom:1px solid var(--border);}
+  .accounting-ap-metrics .accounting-summary-primary{grid-column:span 2;border-bottom:1px solid var(--border);}
+  .accounting-ap-metrics .accounting-summary-primary:nth-child(2){border-right:0;}
+  .accounting-aging-metrics .accounting-aging-card:last-child,.accounting-ap-metrics .accounting-aging-card:last-child{border-right:0;}
+}
+.ap-ledger-badge{font-size:10px;line-height:1.2;}
+
+/* 100K7O1 Payment Method Mapping roles + desktop layout */
+.accounting-mapping-card{overflow:visible}
+.accounting-mapping-heading{align-items:flex-start;gap:10px;margin-bottom:10px}
+.accounting-mapping-heading>div{min-width:0;max-width:100%}
+.accounting-mapping-heading h2{margin-bottom:3px}
+.accounting-mapping-heading p{max-width:980px;line-height:1.45}
+.accounting-mapping-table-wrap{overflow-x:auto;overflow-y:visible;padding-bottom:3px}
+.accounting-mapping-table{min-width:980px;table-layout:fixed}
+.accounting-mapping-table .mapping-method-col{width:22%}
+.accounting-mapping-table .mapping-account-col{width:42%}
+.accounting-mapping-table .mapping-toggle-col{width:18%}
+.accounting-mapping-table th,.accounting-mapping-table td{vertical-align:middle}
+.accounting-mapping-table th{white-space:nowrap}
+.accounting-mapping-table .mapping-toggle-head{text-align:center}
+.accounting-mapping-table .mapping-toggle-cell{text-align:center;white-space:nowrap;overflow:visible}
+.accounting-mapping-table .searchable-select{width:100%;min-width:0}
+.accounting-mapping-toggle{display:inline-flex;align-items:center;justify-content:center;gap:7px;margin:0;min-height:32px;white-space:nowrap}
+.accounting-mapping-toggle input[type="checkbox"]{width:15px;height:15px;min-width:15px;flex:0 0 15px;margin:0}
+.accounting-mapping-toggle span{font-size:11px;line-height:1.2;white-space:nowrap}
+.mapping-role-note{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;padding-top:11px;border-top:1px solid var(--border);color:var(--muted);font-size:11px;line-height:1.45}
+.mapping-role-note span{min-width:0}
+.mapping-role-note strong{color:var(--text)}
+@media(max-width:760px){.mapping-role-note{grid-template-columns:1fr}.accounting-mapping-heading p{max-width:none}}
+
+/* 100K7N14N: AR/AP summary cards mirror Cash Management and Cash Flow. */
+.cash-flow-card-grid.accounting-ar-summary-cards {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+.cash-flow-card-grid.accounting-ap-summary-cards {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.accounting-ar-summary-cards .cash-flow-card,
+.accounting-ap-summary-cards .cash-flow-card {
+  min-height: 96px;
+}
+.accounting-ap-summary-cards .metric-label-row {
+  justify-content: flex-start;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+@media (max-width: 900px) {
+  .cash-flow-card-grid.accounting-ar-summary-cards,
+  .cash-flow-card-grid.accounting-ap-summary-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .cash-flow-card-grid.accounting-ar-summary-cards,
+  .cash-flow-card-grid.accounting-ap-summary-cards { grid-template-columns: 1fr; }
+}

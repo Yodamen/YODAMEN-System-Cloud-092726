@@ -1,0 +1,675 @@
+.accounting-page .content-card { overflow: visible; }
+.accounting-metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.accounting-filter-grid { display: grid; grid-template-columns: minmax(240px, 1.8fr) repeat(2, minmax(160px, .75fr)) auto; gap: 14px; align-items: end; }
+.expense-filter-grid { display: grid; grid-template-columns: repeat(6, minmax(120px, .62fr)) minmax(230px, 1.25fr) auto; gap: 12px; align-items: end; }
+.accounting-filter-actions { display: flex; align-items: end; padding-bottom: 1px; }
+.accounting-table-card { padding-left: 16px; padding-right: 16px; }
+.accounting-table { width: 100%; }
+.accounting-table th,
+.accounting-table td { vertical-align: middle; }
+.accounting-table td:nth-last-child(1),
+.accounting-table th:nth-last-child(1) { width: 118px; }
+.accounting-table .status-pill { white-space: nowrap; }
+.accounting-span-2 { grid-column: span 2; }
+.accounting-span-all { grid-column: 1 / -1; }
+.accounting-account-form { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.accounting-account-form .toggle-field { align-self: end; min-height: 42px; }
+.expense-entry-modal.modal-card.wide { width: min(1180px, calc(100vw - 40px)); max-width: 1180px; }
+.expense-detail-modal.modal-card.wide { width: min(1180px, calc(100vw - 40px)); max-width: 1180px; }
+.expense-header-form { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.expense-footer-form { grid-template-columns: 2fr 1fr; margin-top: 20px; }
+.expense-lines-heading { display: flex; justify-content: space-between; align-items: end; gap: 16px; margin: 24px 0 12px; }
+.expense-lines-heading h3,
+.expense-lines-heading p { margin: 0; }
+.expense-lines-heading p { margin-top: 3px; color: var(--muted); font-size: 13px; }
+.expense-lines-table { min-width: 820px; }
+.expense-lines-table th:nth-child(1) { width: 38%; }
+.expense-lines-table th:nth-child(2) { width: 37%; }
+.expense-lines-table th:nth-child(3) { width: 17%; }
+.expense-lines-table th:nth-child(4) { width: 8%; }
+.expense-lines-table select,
+.expense-lines-table input { width: 100%; }
+.expense-lines-table tfoot td { border-top: 1px solid var(--border); }
+.expense-payable-note { align-self: end; min-height: 42px; display: flex; align-items: center; padding: 10px 12px; border: 1px solid #f0d5a2; border-radius: 10px; background: #fff9ed; color: #775318; font-size: 13px; }
+.expense-account-line { display: block; line-height: 1.35; }
+.expense-account-line + .expense-account-line { margin-top: 4px; }
+.expense-detail-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.expense-detail-summary > div { border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: #fff; }
+.expense-detail-summary span,
+.expense-detail-grid span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 5px; }
+.expense-detail-summary strong { font-size: 17px; }
+.expense-detail-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: #fafafa; }
+.expense-detail-grid strong { font-size: 13px; line-height: 1.4; }
+.expense-section-title { margin: 24px 0 10px; font-size: 15px; }
+.expense-journal-block { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 12px; }
+.expense-journal-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 13px; background: #fafafa; border-bottom: 1px solid var(--border); }
+.expense-journal-block .table-wrap { margin: 0; }
+.expense-journal-block .data-table { margin: 0; }
+.expense-table th:nth-child(1) { width: 11%; }
+.expense-table th:nth-child(2) { width: 13%; }
+.expense-table th:nth-child(3) { width: 19%; }
+.expense-table th:nth-child(4) { width: 24%; }
+.expense-table th:nth-child(5) { width: 12%; }
+.expense-table th:nth-child(6) { width: 10%; }
+.expense-table th:nth-child(7) { width: 8%; }
+.expense-table th:nth-child(8) { width: 9%; }
+.danger-text { color: #b42318; }
+.empty-table-cell { text-align: center; color: var(--muted); padding: 28px !important; }
+
+@media (max-width: 1180px) {
+  .expense-filter-grid { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+  .expense-filter-search { grid-column: span 2; }
+  .expense-header-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .accounting-account-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .accounting-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .accounting-filter-grid,
+  .expense-filter-grid,
+  .expense-header-form,
+  .expense-footer-form,
+  .accounting-account-form,
+  .expense-detail-summary,
+  .expense-detail-grid { grid-template-columns: 1fr; }
+  .accounting-span-2,
+  .accounting-span-all,
+  .expense-filter-search { grid-column: auto; }
+  .expense-entry-modal.modal-card.wide,
+  .expense-detail-modal.modal-card.wide { width: calc(100vw - 18px); }
+}
+
+/* 100J row-based expense lines */
+.expense-line-list { display: grid; gap: 10px; }
+.expense-line-card { display: grid; grid-template-columns: 34px minmax(280px, 1.5fr) minmax(240px, 1.2fr) minmax(150px, .55fr) auto; gap: 12px; align-items: end; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+.expense-line-number { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; align-self: center; background: #f4f4f2; font-size: 12px; font-weight: 700; color: var(--muted); }
+.expense-line-card .form-field { margin: 0; }
+.expense-line-remove { min-height: 42px; white-space: nowrap; }
+.expense-lines-total { display: flex; justify-content: flex-end; align-items: baseline; gap: 24px; padding: 12px 14px 0; }
+.expense-lines-total span { color: var(--muted); font-size: 13px; font-weight: 700; }
+.expense-lines-total strong { min-width: 145px; text-align: right; font-size: 18px; }
+@media (max-width: 980px) { .expense-line-card { grid-template-columns: 34px 1fr 1fr; } .expense-line-amount { grid-column: 2; } .expense-line-remove { grid-column: 3; } }
+@media (max-width: 640px) { .expense-line-card { grid-template-columns: 34px 1fr; } .expense-line-account,.expense-line-description,.expense-line-amount,.expense-line-remove { grid-column: 2; } }
+.accounting-statement-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.accounting-statement-grid h2 { margin: 0 0 14px; font-size: 18px; }
+.statement-table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.statement-section td { background: #fafafa; padding-top: 15px; }
+.statement-total td { border-top: 1px solid var(--border); font-weight: 700; }
+.statement-net td { font-size: 15px; }
+@media (max-width: 980px) { .accounting-statement-grid { grid-template-columns: 1fr; } }
+
+
+/* Update 100K4: management accounting controls, split payments, yearly statements */
+.accounting-controls-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(470px, .72fr);
+  gap: 12px;
+  align-items: stretch;
+}
+.accounting-controls-row > .content-card { margin: 0; }
+.accounting-controls-row .accounting-filter-grid {
+  grid-template-columns: 145px 145px minmax(180px, 1fr) minmax(220px, 1.2fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+.accounting-balance-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(135px, 1fr));
+  gap: 1px;
+  padding: 1px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--border);
+  overflow: hidden;
+}
+.accounting-balance-strip > div {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  min-height: 72px;
+  padding: 11px 14px;
+  background: #fff;
+}
+.accounting-balance-strip span { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; }
+.accounting-balance-strip strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.balance-ok { color: #18794e; }
+.balance-error { color: #b42318; }
+
+.cash-flow-summary { display: grid; gap: 10px; }
+.cash-flow-summary-primary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.cash-flow-summary-secondary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+
+.statement-main-tabs,
+.statement-view-toggle {
+  display: inline-flex;
+  width: fit-content;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #f7f7f5;
+}
+.statement-main-tabs button,
+.statement-view-toggle button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 8px 13px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.statement-main-tabs button.active,
+.statement-view-toggle button.active {
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+.statement-view-toggle { margin-bottom: 12px; }
+.financial-statement-filters {
+  display: grid;
+  grid-template-columns: 120px minmax(180px, 230px) 155px 185px auto;
+  gap: 8px;
+  align-items: end;
+}
+.yearly-income-table {
+  min-width: 1500px;
+  table-layout: fixed;
+}
+.yearly-income-table th:first-child,
+.yearly-income-table td:first-child { width: 285px; position: sticky; left: 0; z-index: 1; background: #fff; }
+.yearly-income-table thead th:first-child { z-index: 2; background: #f8f8f6; }
+.yearly-income-table th:not(:first-child),
+.yearly-income-table td:not(:first-child) { width: 94px; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.yearly-income-table .statement-group-row td { background: #f5f5f2; font-size: 11px; text-transform: uppercase; letter-spacing: .025em; }
+.yearly-income-table .statement-group-row td:first-child { background: #f5f5f2; }
+.yearly-income-table .statement-month-summary td { border-top: 1px solid var(--border); }
+.yearly-income-table .statement-month-summary.major td { border-top: 2px solid #9a9a93; border-bottom: 1px solid #9a9a93; }
+.yearly-income-table .statement-month-summary.major td:first-child,
+.yearly-income-table .statement-month-summary.net td:first-child { background: #fbfbf9; }
+.yearly-income-table .statement-month-summary.net td { border-top: 2px solid #555; border-bottom: 2px solid #555; }
+
+.expense-payment-section {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fafafa;
+}
+.expense-payment-split-list { display: grid; gap: 8px; }
+.expense-payment-split-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.35fr) 140px minmax(180px, 1fr) 88px;
+  gap: 8px;
+  align-items: end;
+}
+.expense-payment-split-row .form-field { min-width: 0; margin: 0; }
+.expense-payment-split-row .compact-button { width: 100%; min-height: 40px; }
+.expense-table th:nth-child(1) { width: 9%; }
+.expense-table th:nth-child(2) { width: 12%; }
+.expense-table th:nth-child(3) { width: 16%; }
+.expense-table th:nth-child(4) { width: 17%; }
+.expense-table th:nth-child(5) { width: 13%; }
+.expense-table th:nth-child(6) { width: 10%; }
+.expense-table th:nth-child(7) { width: 10%; }
+.expense-table th:nth-child(8) { width: 7%; }
+.expense-table th:nth-child(9) { width: 6%; }
+
+@media (max-width: 1180px) {
+  .accounting-controls-row { grid-template-columns: 1fr; }
+  .accounting-controls-row .accounting-filter-grid { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+  .financial-statement-filters { grid-template-columns: repeat(3, minmax(150px, 1fr)); }
+}
+@media (max-width: 760px) {
+  .accounting-balance-strip,
+  .cash-flow-summary-primary,
+  .cash-flow-summary-secondary,
+  .financial-statement-filters,
+  .expense-payment-split-row { grid-template-columns: 1fr; }
+  .accounting-controls-row .accounting-filter-grid { grid-template-columns: 1fr; }
+}
+
+/* Update 100K7C: compact, connected accounting summaries */
+.accounting-page .metric-card {
+  min-height: 62px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  box-shadow: none;
+}
+.accounting-page .metric-card span {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: .015em;
+}
+.accounting-page .metric-card strong {
+  margin-top: 3px;
+  font-size: 15px;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.accounting-page .metric-card small { margin-top: 3px; }
+
+.accounting-metric-grid {
+  grid-template-columns: minmax(250px, 380px);
+  gap: 8px;
+}
+
+.accounting-balance-strip {
+  border-radius: 8px;
+}
+.accounting-balance-strip > div {
+  min-height: 58px;
+  padding: 8px 11px;
+  gap: 2px;
+}
+.accounting-balance-strip span { font-size: 9px; }
+.accounting-balance-strip strong { font-size: 14px; }
+
+.cash-flow-summary { gap: 7px; }
+.cash-flow-summary-primary,
+.cash-flow-summary-secondary {
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.cash-flow-summary .metric-card {
+  min-height: 58px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  background: #fff;
+}
+.cash-flow-summary-primary .metric-card:last-child,
+.cash-flow-summary-secondary .metric-card:last-child { border-right: 0; }
+
+@media (max-width: 760px) {
+  .accounting-metric-grid { grid-template-columns: 1fr; }
+  .cash-flow-summary-primary,
+  .cash-flow-summary-secondary { grid-template-columns: 1fr; }
+  .cash-flow-summary .metric-card {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .cash-flow-summary-primary .metric-card:last-child,
+  .cash-flow-summary-secondary .metric-card:last-child { border-bottom: 0; }
+}
+
+/* Update 100K7E: Petty Cash as automatic subledger + replenishment/liquidation only */
+.petty-cash-metric-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.petty-cash-ledger-table {
+  table-layout: fixed;
+  min-width: 1120px;
+}
+.petty-cash-ledger-table th:nth-child(1) { width: 9%; }
+.petty-cash-ledger-table th:nth-child(2) { width: 16%; }
+.petty-cash-ledger-table th:nth-child(3) { width: 25%; }
+.petty-cash-ledger-table th:nth-child(4) { width: 17%; }
+.petty-cash-ledger-table th:nth-child(5),
+.petty-cash-ledger-table th:nth-child(6),
+.petty-cash-ledger-table th:nth-child(7) { width: 9%; }
+.petty-cash-ledger-table th:nth-child(8) { width: 6%; }
+.petty-cash-ledger-table td:nth-child(5),
+.petty-cash-ledger-table td:nth-child(6),
+.petty-cash-ledger-table td:nth-child(7) {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.petty-cash-replenishment-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.petty-cash-liquidation-header { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.petty-liquidation-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+}
+.petty-liquidation-summary > div {
+  min-height: 66px;
+  padding: 10px 12px;
+  border-right: 1px solid var(--border);
+  display: grid;
+  align-content: center;
+  gap: 4px;
+}
+.petty-liquidation-summary > div:last-child { border-right: 0; }
+.petty-liquidation-summary span,
+.petty-liquidation-variance span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+.petty-liquidation-summary strong,
+.petty-liquidation-variance strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.petty-cash-liquidation-count-grid {
+  grid-template-columns: minmax(220px, .7fr) minmax(220px, .7fr);
+  justify-content: start;
+}
+.petty-liquidation-variance {
+  min-height: 68px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fafafa;
+  display: grid;
+  align-content: center;
+  gap: 3px;
+}
+.petty-liquidation-variance small { color: var(--muted); font-size: 10px; font-weight: 700; }
+
+@media (max-width: 980px) {
+  .petty-cash-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .petty-liquidation-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .petty-liquidation-summary > div:nth-child(2) { border-right: 0; }
+  .petty-liquidation-summary > div:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
+}
+@media (max-width: 640px) {
+  .petty-cash-metric-grid,
+  .petty-cash-replenishment-grid,
+  .petty-cash-liquidation-header,
+  .petty-cash-liquidation-count-grid,
+  .petty-liquidation-summary { grid-template-columns: 1fr; }
+  .petty-liquidation-summary > div { border-right: 0; border-bottom: 1px solid var(--border); }
+  .petty-liquidation-summary > div:last-child { border-bottom: 0; }
+}
+
+/* Update 100K7F: Petty Cash action dropdown + aligned reconciliation count */
+.petty-cash-action-dropdown {
+  position: relative;
+}
+.petty-cash-action-dropdown > summary {
+  list-style: none;
+}
+.petty-cash-action-dropdown > summary::-webkit-details-marker {
+  display: none;
+}
+.petty-cash-action-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+.petty-cash-action-trigger span {
+  font-size: 10px;
+  transition: transform .16s ease;
+}
+.petty-cash-action-dropdown[open] .petty-cash-action-trigger span {
+  transform: rotate(180deg);
+}
+.petty-cash-action-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .14);
+}
+.petty-cash-action-menu button {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.petty-cash-action-menu button:hover {
+  background: #f5f1e6;
+}
+.petty-cash-liquidation-count-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 10px;
+}
+.petty-liquidation-count-card,
+.petty-liquidation-variance {
+  min-height: 82px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #fafafa;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+}
+.petty-liquidation-count-card span,
+.petty-liquidation-variance span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+.petty-liquidation-count-card input {
+  width: 100%;
+  min-height: 38px;
+  margin: 0;
+}
+.petty-liquidation-variance strong {
+  line-height: 1.15;
+}
+@media (max-width: 640px) {
+  .petty-cash-liquidation-count-grid { grid-template-columns: 1fr; }
+}
+
+/* 100K7N14: Petty Cash summary and finance-column alignment */
+.petty-cash-metric-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.petty-cash-ledger-table th:nth-child(5),
+.petty-cash-ledger-table th:nth-child(6),
+.petty-cash-ledger-table th:nth-child(7) {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1100px) { .petty-cash-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .petty-cash-metric-grid { grid-template-columns: 1fr; } }
+
+/* 100K7N14D: keep all five Petty Cash summary cards on one desktop row. */
+@media (min-width: 861px) {
+  .metric-grid.accounting-metric-grid.petty-cash-metric-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .petty-cash-metric-grid > .metric-card {
+    min-width: 0;
+    padding: 8px 10px;
+  }
+
+  .petty-cash-metric-grid .metric-card span {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .petty-cash-metric-grid .metric-card strong {
+    font-size: 14px;
+    line-height: 1.15;
+  }
+
+  .petty-cash-metric-grid .metric-card small {
+    font-size: 9px;
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 860px) and (min-width: 641px) {
+  .metric-grid.accounting-metric-grid.petty-cash-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 100K7N14E: sleek Cash & Bank Balance cards */
+.cash-balance-section {
+  display: grid;
+  gap: 12px;
+}
+
+.cash-balance-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+}
+
+.cash-balance-card {
+  position: relative;
+  min-width: 0;
+  min-height: 112px;
+  display: grid;
+  align-content: space-between;
+  gap: 8px;
+  padding: 13px 14px 14px;
+  border: 1px solid #e6e3db;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #ffffff 0%, #fbfaf7 100%);
+  box-shadow: 0 3px 12px rgba(24, 24, 27, .045);
+  overflow: hidden;
+}
+
+.cash-balance-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--gold);
+}
+
+.cash-balance-card-head {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.cash-balance-code {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #f5f1e4;
+  color: #71602f;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  white-space: nowrap;
+}
+
+
+.cash-balance-name {
+  min-width: 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cash-balance-amount {
+  color: var(--text);
+  font-size: clamp(17px, 1.4vw, 22px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cash-balance-card.is-negative .cash-balance-amount {
+  color: #b44545;
+}
+
+.cash-balance-card.is-negative::before {
+  background: #c86464;
+}
+
+.cash-balance-empty {
+  grid-column: 1 / -1;
+  min-height: 88px;
+  display: grid;
+  place-items: center;
+}
+
+@media (hover: hover) {
+  .cash-balance-card {
+    transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  }
+
+  .cash-balance-card:hover {
+    transform: translateY(-1px);
+    border-color: #d9d1b8;
+    box-shadow: 0 7px 18px rgba(24, 24, 27, .07);
+  }
+}
+
+@media (max-width: 760px) {
+  .cash-balance-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+}
+
+@media (max-width: 520px) {
+  .cash-balance-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 100K7N14G: Cash Flow Statement summary cards match Cash & Bank Balances */
+.cash-flow-card-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.cash-flow-card {
+  min-height: 96px;
+  padding: 13px 14px 14px;
+}
+
+.cash-flow-card-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+@media (max-width: 1000px) {
+  .cash-flow-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .cash-flow-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

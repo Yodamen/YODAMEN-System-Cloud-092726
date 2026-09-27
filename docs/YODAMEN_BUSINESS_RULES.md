@@ -95,3 +95,15 @@ Service completion alone does not create commission.
 - One Visit can produce only one active Sale.
 - One operational source line can produce only one matching Sale Item identity.
 - Duplicate financial submissions must replay the original result instead of creating duplicate money movement.
+
+## Booking-linked Advance vs Interim Payment
+
+- Advance Payment is money collected for the newly created Booking/Walk-In and remains unapplied until that Booking's future Sale is available for checkout allocation.
+- Interim Payment is money collected while creating a new Booking/Walk-In for a customer who already has finalized On Account obligations.
+- Interim Payment must link to the newly created Booking/Walk-In on the Payment header.
+- Interim Payment Applications must settle older On Account Sale Items for the same customer; the new Booking's future Sale must not treat that Interim Payment as its Advance.
+- If active On Account balances are detected, the collection UI defaults to Interim Payment and requires staff to deliberately select Advance when appropriate.
+
+## Split receipt at new Booking / Walk-In
+
+When a customer pays while a new Booking or Walk-In is created, the payment is recorded as one immutable receipt. If the customer also has older On Account balances, staff may split that same receipt between an Advance Reserve for the new Booking and Interim Settlement of older On Account service lines. The sum of all allocations must equal the receipt amount. The future Sale for the new Booking may consume only its Advance Reserve component.

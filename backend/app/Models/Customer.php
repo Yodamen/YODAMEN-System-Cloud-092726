@@ -25,6 +25,7 @@ class Customer extends Model
         'lead_source_reference_id',
         'registration_date',
         'status',
+        'is_test_customer',
         'notes',
         'created_by',
         'updated_by',
@@ -35,6 +36,7 @@ class Customer extends Model
         return [
             'birthday' => 'date:Y-m-d',
             'registration_date' => 'date:Y-m-d',
+            'is_test_customer' => 'boolean',
         ];
     }
 
@@ -66,5 +68,25 @@ class Customer extends Model
     public function visits(): HasMany
     {
         return $this->hasMany(Visit::class)->orderByDesc('visit_date')->orderByDesc('id');
+    }
+
+    public function packageEnrollments(): HasMany
+    {
+        return $this->hasMany(PackageEnrollment::class);
+    }
+
+    public function serviceCredits(): HasMany
+    {
+        return $this->hasMany(ServiceCredit::class);
+    }
+
+    public function getSegmentLabelAttribute(): string
+    {
+        $completedVisits = $this->relationLoaded('visits')
+            ? $this->visits->filter(fn ($visit) => strtoupper((string) $visit->status) === 'COMPLETED')->count()
+            : $this->visits()->where('status', 'COMPLETED')->count();
+
+        return app(\App\Services\Customers\CustomerClassificationService::class)
+            ->typeFor((int) $this->business_id, $completedVisits)['name'];
     }
 }

@@ -1,0 +1,225 @@
+.customer-settings-page .page-subtitle {
+  max-width: 900px;
+}
+
+.customer-mix-tabs {
+  margin-bottom: 0;
+}
+
+.customer-mix-card {
+  overflow: visible;
+}
+
+.customer-mix-section-heading {
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.customer-mix-section-heading > div:first-child {
+  min-width: 0;
+}
+
+.customer-mix-section-heading p {
+  max-width: 760px;
+}
+
+.customer-mix-table-wrap {
+  overflow: visible;
+}
+
+.customer-mix-table {
+  table-layout: fixed;
+  min-width: 760px;
+}
+
+.customer-mix-table th:nth-child(1) { width: 24%; }
+.customer-mix-table th:nth-child(2) { width: 22%; }
+.customer-mix-table th:nth-child(3) { width: 30%; }
+.customer-mix-table th:nth-child(4) { width: 14%; }
+.customer-mix-table th:nth-child(5) { width: 10%; }
+
+.customer-mix-table tbody tr {
+  transition: background .15s ease;
+}
+
+.customer-mix-table tbody tr:hover {
+  background: #fbfbfc;
+}
+
+.customer-mix-name {
+  display: block;
+  font-size: .77rem;
+  line-height: 1.3;
+}
+
+.customer-mix-range {
+  display: inline-block;
+  color: var(--text);
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.customer-mix-table .action-cell {
+  overflow: visible;
+}
+
+.customer-mix-table .action-select {
+  min-width: 86px;
+}
+
+.customer-mix-editor-modal .modal-body {
+  padding-top: 16px;
+}
+
+.customer-mix-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(180px, .7fr);
+  gap: 12px;
+}
+
+.customer-mix-status-control {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 13px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafafa;
+  cursor: pointer;
+}
+
+.customer-mix-status-control input {
+  width: 15px;
+  height: 15px;
+  margin: 2px 0 0;
+  flex: 0 0 auto;
+}
+
+.customer-mix-status-control > span {
+  display: grid;
+  gap: 2px;
+}
+
+.customer-mix-status-control strong {
+  color: var(--text);
+  font-size: .73rem;
+}
+
+.customer-mix-status-control small {
+  color: var(--muted);
+  font-size: .66rem;
+  line-height: 1.35;
+}
+
+.customer-mix-editor-modal .modal-actions {
+  margin-top: 18px;
+}
+
+@media (max-width: 900px) {
+  .customer-mix-table-wrap {
+    overflow-x: auto;
+  }
+}
+
+@media (max-width: 760px) {
+  .customer-mix-section-heading {
+    align-items: flex-start;
+  }
+
+  .customer-mix-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-mix-table {
+    min-width: 760px;
+  }
+}
+
+/* 100K7N10F: Customer Class badge + configurable Customer Type color */
+.customer-mix-type-table th:nth-child(1) { width: 21%; }
+.customer-mix-type-table th:nth-child(2) { width: 17%; }
+.customer-mix-type-table th:nth-child(3) { width: 18%; }
+.customer-mix-type-table th:nth-child(4) { width: 25%; }
+.customer-mix-type-table th:nth-child(5) { width: 11%; }
+.customer-mix-type-table th:nth-child(6) { width: 8%; }
+
+.customer-mix-class-table th:nth-child(1) { width: 24%; }
+.customer-mix-class-table th:nth-child(2) { width: 22%; }
+.customer-mix-class-table th:nth-child(3) { width: 30%; }
+.customer-mix-class-table th:nth-child(4) { width: 14%; }
+.customer-mix-class-table th:nth-child(5) { width: 10%; }
+
+.customer-type-color-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.customer-type-color-display strong {
+  font-size: .68rem;
+  letter-spacing: .02em;
+}
+
+.customer-type-color-swatch {
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(0, 0, 0, .12);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .2);
+}
+
+.customer-type-color-field {
+  margin-top: 14px;
+}
+
+.customer-type-color-picker {
+  display: grid;
+  grid-template-columns: 46px minmax(110px, 140px) minmax(130px, 1fr);
+  align-items: center;
+  gap: 9px;
+}
+
+.customer-type-color-input {
+  width: 46px !important;
+  min-width: 46px !important;
+  height: 38px !important;
+  padding: 3px !important;
+  cursor: pointer;
+}
+
+.customer-type-color-code {
+  min-width: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-transform: uppercase;
+}
+
+.customer-type-color-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: .64rem;
+  font-weight: 800;
+  white-space: nowrap;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, .2);
+}
+
+.customer-type-color-field > small {
+  margin-top: 5px;
+}
+
+@media (max-width: 760px) {
+  .customer-type-color-picker {
+    grid-template-columns: 46px 1fr;
+  }
+
+  .customer-type-color-preview {
+    grid-column: 1 / -1;
+  }
+}

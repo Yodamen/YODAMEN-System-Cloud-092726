@@ -1,0 +1,128 @@
+
+.service-recipe-modal.modal-card.wide {
+  width: min(1480px, calc(100vw - 28px));
+  max-width: 1480px;
+}
+
+.service-recipe-modal .modal-body {
+  overflow-x: hidden;
+}
+
+.service-recipe-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 420px) minmax(150px, 220px);
+  gap: 10px;
+}
+
+.service-recipe-materials {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 12px;
+  background: #fafafa;
+}
+
+.service-recipe-line-header,
+.service-recipe-line {
+  display: grid;
+  grid-template-columns: minmax(300px, 2.2fr) 140px 135px 165px 175px 145px 96px;
+  gap: 8px;
+  align-items: center;
+}
+
+.service-recipe-line-header {
+  padding: 0 4px 7px;
+  color: var(--muted);
+  font-size: .62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.service-recipe-line {
+  margin-bottom: 8px;
+}
+
+.service-recipe-line select,
+.service-recipe-line input,
+.recipe-readonly {
+  width: 100%;
+  min-height: 35px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 9px;
+  background: #fff;
+  font: inherit;
+  font-size: .75rem;
+  font-weight: 400;
+}
+
+.recipe-readonly {
+  display: flex;
+  align-items: center;
+}
+
+.service-recipe-material-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.service-recipe-total {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.service-recipe-total span { color: var(--muted); font-size: .7rem; }
+
+@media (max-width: 900px) {
+  .service-recipe-line-header { display: none; }
+  .service-recipe-line { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+}
+
+@media (max-width: 680px) {
+  .service-recipe-filters,
+  .service-recipe-line { grid-template-columns: 1fr; }
+}
+
+.service-consumption-history-table th,
+.service-consumption-history-table td,
+.service-consumption-detail-table th,
+.service-consumption-detail-table td {
+  white-space: nowrap;
+}
+
+.service-consumption-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.service-consumption-detail-summary > div {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.service-consumption-detail-summary span {
+  display: block;
+  color: var(--muted);
+  font-size: .64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 760px) {
+  .service-consumption-detail-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.service-consumption-history-table .danger-text,
+.service-consumption-detail-table .danger-text {
+  color: #b42318;
+}

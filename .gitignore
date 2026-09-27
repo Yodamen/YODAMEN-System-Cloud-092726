@@ -1,1 +1,84 @@
+# ==========================================
+# YODAMEN - ROOT GITIGNORE
+# ==========================================
+
+# macOS
 .DS_Store
+**/.DS_Store
+
+# ------------------------------------------
+# ENVIRONMENT / SECRETS
+# ------------------------------------------
+.env
+.env.*
+!.env.example
+
+# ------------------------------------------
+# PHP / LARAVEL DEPENDENCIES
+# ------------------------------------------
+backend/vendor/
+
+# Laravel runtime/cache
+backend/bootstrap/cache/*.php
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+
+# Preserve Laravel directory placeholders
+!backend/storage/logs/.gitignore
+!backend/storage/framework/cache/.gitignore
+!backend/storage/framework/sessions/.gitignore
+!backend/storage/framework/views/.gitignore
+
+# ------------------------------------------
+# NODE / FRONTEND DEPENDENCIES
+# ------------------------------------------
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Frontend production build
+frontend/dist/
+
+# Laravel/Vite generated build
+backend/public/build/
+backend/public/hot
+
+# ------------------------------------------
+# TEST / TOOL OUTPUT
+# ------------------------------------------
+.phpunit.result.cache
+backend/.phpunit.result.cache
+coverage/
+frontend/coverage/
+backend/coverage/
+
+# ------------------------------------------
+# EDITORS / IDE
+# ------------------------------------------
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ------------------------------------------
+# TEMPORARY / BACKUP FILES
+# ------------------------------------------
+*.tmp
+*.temp
+*.log
+
+# Keep intentional source-code backup files for now.
+# We will review .bak files separately before production.
+
+# ------------------------------------------
+# LOCAL DATABASE FILES
+# ------------------------------------------
+*.sqlite
+*.sqlite3
+
+# Source-code backup artifacts
+*.bak
+*.backup
+*.old

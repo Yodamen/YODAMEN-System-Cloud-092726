@@ -47,3 +47,36 @@ test('system reference code cannot be changed', function () {
         ])
         ->assertUnprocessable();
 });
+
+test('workflow reason reference requires applicable workflows and stores them as metadata', function () {
+    $user = foundationUser('ROLE-SA');
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/admin/references', [
+            'group_code' => 'WORKFLOW_REASON',
+            'code' => 'CUSTOM_TEST_REASON',
+            'display_value' => 'Custom Test Reason',
+            'sort_order' => 9000,
+            'metadata' => ['contexts' => []],
+        ])
+        ->assertStatus(422);
+
+    $response = $this->actingAs($user)
+        ->postJson('/api/v1/admin/references', [
+            'group_code' => 'WORKFLOW_REASON',
+            'code' => 'CUSTOM_TEST_REASON',
+            'display_value' => 'Custom Test Reason',
+            'sort_order' => 9000,
+            'metadata' => ['contexts' => ['INVENTORY_ADJUSTMENT', 'EXPENSE_REVERSAL']],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('reference.metadata.contexts.0', 'INVENTORY_ADJUSTMENT')
+        ->assertJsonPath('reference.metadata.contexts.1', 'EXPENSE_REVERSAL');
+
+    $this->actingAs($user)
+        ->getJson('/api/v1/workflow-reasons?context=INVENTORY_ADJUSTMENT')
+        ->assertOk()
+        ->assertJsonFragment(['code' => 'CUSTOM_TEST_REASON', 'name' => 'Custom Test Reason']);
+
+    expect($response->json('reference.group.code'))->toBe('WORKFLOW_REASON');
+});

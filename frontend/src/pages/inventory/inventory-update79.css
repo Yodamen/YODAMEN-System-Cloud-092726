@@ -1,0 +1,380 @@
+.retail-filter-panel {
+  display: grid;
+  grid-template-columns: 165px 150px 125px 150px 95px 115px 95px auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.retail-filter-panel > .booking-filter-field { min-width: 0; }
+.retail-master-search,
+.retail-master-branch,
+.retail-master-stock-type,
+.retail-master-category,
+.retail-master-retail,
+.retail-master-commission,
+.retail-master-status { min-width: 0 !important; }
+
+.retail-filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding-bottom: 0;
+}
+
+.retail-filter-actions .compact-button {
+  min-height: 34px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.product-master-form {
+  align-items: start;
+}
+
+.product-master-form > .form-field {
+  align-self: start;
+  min-width: 0;
+}
+
+.product-master-form .form-field > input,
+.product-master-form .form-field > select,
+.product-master-form .form-field > textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.product-master-form .form-field > input,
+.product-master-form .form-field > select {
+  min-height: 36px;
+}
+
+.product-master-section-heading {
+  margin-top: 2px;
+}
+
+.product-status-field { max-width: none; }
+.product-commission-control,
+.product-retail-control {
+  align-self: stretch;
+  min-height: 62px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1250px) {
+  .retail-filter-panel { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .retail-filter-actions { align-self: end; }
+}
+
+@media (max-width: 720px) {
+  .retail-filter-panel { grid-template-columns: 1fr; }
+}
+
+/* Update 89: compact one-row filters and expanded item modal */
+.retail-filter-panel {
+  grid-template-columns: 135px 125px 105px 120px 78px 95px 78px auto;
+  gap: 7px;
+}
+
+.retail-filter-panel .booking-filter-field {
+  min-width: 0;
+}
+
+.retail-filter-panel .booking-filter-field > select,
+.retail-filter-panel .booking-filter-field > input {
+  width: 100%;
+  min-width: 0;
+}
+
+.inventory-item-modal.modal-card.wide,
+.inventory-product-view-modal.modal-card.wide {
+  width: min(1120px, calc(100vw - 32px));
+}
+
+.inventory-item-modal .modal-body,
+.inventory-product-view-modal .modal-body {
+  overflow-x: hidden;
+}
+
+.inventory-item-modal .product-master-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.inventory-item-modal .product-master-form .form-span-2,
+.inventory-item-modal .product-master-section-heading {
+  grid-column: 1 / -1;
+}
+
+.inventory-item-modal .product-retail-control {
+  min-height: auto;
+}
+
+.inventory-product-view-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.inventory-product-view-grid > div {
+  display: grid;
+  gap: 3px;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafafa;
+  min-width: 0;
+}
+
+.inventory-product-view-grid span {
+  color: var(--muted);
+  font-size: .64rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.inventory-product-view-grid strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inventory-price-history-heading {
+  margin-top: 4px;
+}
+
+.inventory-price-history-table th,
+.inventory-price-history-table td {
+  white-space: nowrap;
+}
+
+@media (max-width: 1250px) {
+  .retail-filter-panel { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .inventory-item-modal .product-master-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .inventory-item-modal .product-master-form,
+  .inventory-product-view-grid { grid-template-columns: 1fr; }
+}
+
+/* Update 90: force compact single-row desktop filters */
+.retail-filter-panel {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: end;
+  gap: 6px;
+}
+.retail-master-search { flex: 0 0 150px; }
+.retail-master-branch { flex: 0 0 115px; }
+.retail-master-stock-type { flex: 0 0 100px; }
+.retail-master-category { flex: 0 0 112px; }
+.retail-master-retail { flex: 0 0 72px; }
+.retail-master-commission { flex: 0 0 88px; }
+.retail-master-status { flex: 0 0 112px; }
+.retail-filter-actions { flex: 0 0 auto; align-self: end; }
+.retail-filter-panel .booking-filter-field { min-width: 0 !important; }
+.retail-filter-panel .booking-filter-field > select,
+.retail-filter-panel .booking-filter-field > input { width: 100%; }
+
+@media (max-width: 900px) {
+  .retail-filter-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .retail-master-search,
+  .retail-master-branch,
+  .retail-master-stock-type,
+  .retail-master-category,
+  .retail-master-retail,
+  .retail-master-commission,
+  .retail-master-status { flex: initial; }
+}
+
+/* Update 92: keep the full Inventory Masterlist filter strip on one desktop row */
+.retail-filter-panel {
+  display: grid !important;
+  grid-template-columns: minmax(125px, 1.15fr) 105px 96px minmax(105px, 1fr) 66px 86px 104px 112px !important;
+  gap: 6px !important;
+  align-items: end !important;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.retail-filter-panel > .booking-filter-field,
+.retail-filter-actions {
+  min-width: 0 !important;
+  margin: 0;
+}
+
+.retail-filter-actions {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  gap: 5px !important;
+  align-items: end !important;
+  justify-content: flex-start;
+}
+
+.retail-filter-actions .compact-button {
+  width: auto;
+  min-width: 50px;
+  padding-left: 9px;
+  padding-right: 9px;
+}
+
+@media (max-width: 980px) {
+  .retail-filter-panel {
+    min-width: 900px;
+    overflow: visible;
+  }
+}
+
+
+/* Update 93: balanced one-row Inventory Masterlist filters */
+@media (min-width: 1251px) {
+  .retail-filter-panel {
+    display: grid;
+    grid-template-columns: 145px 150px 140px 185px 105px 130px 130px auto;
+    gap: 8px;
+    align-items: end;
+  }
+  .retail-master-search { min-width: 0 !important; }
+  .retail-master-branch { min-width: 0 !important; }
+  .retail-master-stock-type { min-width: 0 !important; }
+  .retail-master-category { min-width: 0 !important; }
+  .retail-master-retail { min-width: 0 !important; }
+  .retail-master-commission { min-width: 0 !important; }
+  .retail-master-status { min-width: 0 !important; }
+  .retail-filter-actions { align-self: end; }
+}
+
+/* Update 96B: inventory item modal hierarchy and conditional sellable controls */
+.inventory-item-modal .inventory-product-form-v3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 12px;
+}
+
+.inventory-item-modal .inventory-product-form-v3 .product-item-name-field {
+  grid-column: span 2;
+}
+
+.inventory-item-modal .inventory-product-form-v3 .product-form-span-2-cols {
+  grid-column: span 2;
+}
+
+.inventory-item-modal .inventory-product-form-v3 .product-status-field {
+  grid-column: 3;
+}
+
+.inventory-cost-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.inventory-cost-input-wrap > input {
+  width: 100%;
+  min-height: 36px;
+  box-sizing: border-box;
+  padding-right: 96px;
+}
+
+.inventory-cost-uom-suffix {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.inventory-product-form-v3 .inventory-readonly-value {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1250px) {
+  .inventory-item-modal .inventory-product-form-v3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inventory-item-modal .inventory-product-form-v3 .product-status-field {
+    grid-column: auto;
+  }
+
+  .inventory-item-modal .inventory-product-form-v3 .product-item-name-field,
+  .inventory-item-modal .inventory-product-form-v3 .product-form-span-2-cols {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .inventory-item-modal .inventory-product-form-v3 {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-item-modal .inventory-product-form-v3 .product-item-name-field,
+  .inventory-item-modal .inventory-product-form-v3 .product-form-span-2-cols,
+  .inventory-item-modal .inventory-product-form-v3 .product-status-field {
+    grid-column: auto;
+  }
+}
+
+/* Update 96C: Inventory Masterlist table columns and single-row filter balance */
+@media (min-width: 1251px) {
+  .retail-filter-panel {
+    display: grid !important;
+    grid-template-columns: 125px 160px 145px 125px 76px 128px 132px auto !important;
+    gap: 8px !important;
+    align-items: end !important;
+    width: 100%;
+  }
+
+  .retail-master-search,
+  .retail-master-branch,
+  .retail-master-stock-type,
+  .retail-master-category,
+  .retail-master-retail,
+  .retail-master-commission,
+  .retail-master-status {
+    min-width: 0 !important;
+  }
+
+  .retail-filter-actions {
+    align-self: end !important;
+    white-space: nowrap;
+  }
+}
+
+.product-master-table th,
+.product-master-table td {
+  vertical-align: middle;
+}
+
+.product-master-table th:nth-child(1),
+.product-master-table td:nth-child(1) { width: 14%; }
+.product-master-table th:nth-child(2),
+.product-master-table td:nth-child(2) { width: 19%; }
+.product-master-table th:nth-child(3),
+.product-master-table td:nth-child(3) { width: 18%; }
+.product-master-table th:nth-child(4),
+.product-master-table td:nth-child(4) { width: 9%; white-space: nowrap; }
+.product-master-table th:nth-child(5),
+.product-master-table td:nth-child(5) { width: 12%; white-space: nowrap; }
+.product-master-table th:nth-child(6),
+.product-master-table td:nth-child(6) { width: 11%; white-space: nowrap; }
+.product-master-table th:nth-child(7),
+.product-master-table td:nth-child(7) { width: 10%; white-space: nowrap; }
+.product-master-table th:nth-child(8),
+.product-master-table td:nth-child(8) { width: 7%; white-space: nowrap; }
+
+
+/* Update 100K7N4: give Item Name more desktop width without breaking the one-row filter strip */
+@media (min-width: 1251px) {
+  .retail-filter-panel {
+    grid-template-columns: minmax(220px, 1.65fr) 125px 112px 125px 76px 118px 122px auto !important;
+  }
+}

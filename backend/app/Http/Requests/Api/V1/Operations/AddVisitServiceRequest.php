@@ -12,6 +12,7 @@ class AddVisitServiceRequest extends FormRequest
     {
         return [
             'service_id' => ['required', 'integer', 'min:1'],
+            'service_credit_id' => ['nullable', 'integer', 'min:1'],
             'quantity' => ['nullable', 'integer', 'min:1', 'max:100'],
             'assigned_personnel_id' => ['nullable', 'integer', 'min:1'],
             'notes' => ['nullable', 'string', 'max:2000'],

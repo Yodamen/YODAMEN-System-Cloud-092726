@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Payment extends Model
 {
@@ -15,7 +16,7 @@ class Payment extends Model
     protected $fillable = [
         'business_id', 'code', 'customer_id', 'booking_id', 'sale_id', 'visit_id', 'payment_type', 'amount',
         'payment_method_reference_id', 'payment_method_snapshot', 'reference_no', 'bank_account', 'payment_date',
-        'status', 'idempotency_key', 'notes', 'created_by',
+        'status', 'reversed_at', 'reversed_by', 'reversal_reason', 'reversal_action_request_id', 'idempotency_key', 'notes', 'created_by',
     ];
 
     protected function casts(): array
@@ -23,8 +24,11 @@ class Payment extends Model
         return [
             'amount' => 'decimal:2',
             'payment_date' => 'immutable_datetime',
+            'reversed_at' => 'immutable_datetime',
         ];
     }
+
+    public function applications(): HasMany { return $this->hasMany(PaymentApplication::class); }
 
     public function business(): BelongsTo { return $this->belongsTo(Business::class); }
     public function customer(): BelongsTo { return $this->belongsTo(Customer::class); }

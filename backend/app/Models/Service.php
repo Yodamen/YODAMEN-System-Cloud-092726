@@ -57,4 +57,14 @@ class Service extends Model
     {
         return $this->hasMany(ServicePrice::class);
     }
+
+    public function packageEnrollments(): HasMany
+    {
+        return $this->hasMany(PackageEnrollment::class);
+    }
+
+    public function serviceCredits(): HasMany
+    {
+        return $this->hasMany(ServiceCredit::class);
+    }
 }

@@ -22,7 +22,7 @@ Historical V-number aliases and repair scripts are implementation evidence. The 
 | `OperationsPerformance.js` / HTML | Operations screens | split React pages/actions | PLANNED |
 | `ServiceCredit.js` / setup | package/service credit | Packages domain | PLANNED |
 | `Sales.js` / `SalesHTML.html` | Sale/Payment base + Transactions | Sales domain | PLANNED |
-| `ServicingPaymentAllocation.js` | allocations/package target | PaymentApplication actions | PLANNED |
+| `ServicingPaymentAllocation.js` | allocations/package target | `payment_applications` + CheckoutSettlementService | Phase 4 CURRENT_SALE_LINE implemented; package target deferred |
 | `SalesPayrollBridge.js` | financial-finalization waterfall | FinalizeCheckout domain action/events | PLANNED |
 | `SalesServiceLineSettlement2026.js` | parent Pending + line settlement + duplicate repair | read models + SQL constraints | PLANNED; repair import-only |
 | `ServiceBalanceFinancial2026.js` | per-enrollment financials | Package Enrollment read model | PLANNED |
@@ -64,3 +64,15 @@ Historical V-number aliases and repair scripts are implementation evidence. The 
 | Pending Transactions parent view | `GET /api/v1/sales/transactions/pending`, React `TransactionsPage` |
 | Checkout detail read | `GET /api/v1/sales/transactions/{sale}/checkout` |
 | Apps Script duplicate Sales repair | SQL unique `sales.visit_id` + transactional row locking; repair runtime not ported |
+
+
+## Phase 4 mappings
+
+| Legacy Apps Script / Sheet | Target |
+|---|---|
+| service-line Advance allocation | `payment_applications` target `CURRENT_SALE_LINE` |
+| Checkout payment allocation | `CheckoutSettlementService::finalize()` |
+| finalized line classification | `sale_items.status` + applied/balance snapshots |
+| Pending parent → finalized line tabs | Pending Sales query + `settlement-lines` endpoint |
+| On Account collection | `COLLECTION` Payment + Payment Applications |
+| duplicate financial submit guards | `IdempotencyService` + Payment unique idempotency + DB transactions |

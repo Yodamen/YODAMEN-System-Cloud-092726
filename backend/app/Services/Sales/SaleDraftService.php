@@ -21,6 +21,7 @@ class SaleDraftService
         private readonly CodeSequenceService $codes,
         private readonly BusinessClock $clock,
         private readonly AuditService $audit,
+        private readonly PaymentLedgerService $paymentLedger,
     ) {
     }
 
@@ -41,7 +42,7 @@ class SaleDraftService
                 throw new DomainException('A Sale draft can only be created from a completed Visit.');
             }
 
-            $visit->load(['serviceLines.service', 'retailLines', 'booking', 'customer']);
+            $visit->load(['serviceLines.service', 'retailLines.assignedPersonnel', 'retailLines.retailProduct', 'booking', 'customer']);
             $completedServices = $visit->serviceLines
                 ->filter(fn (VisitServiceLine $line) => strtoupper((string) $line->status) === 'COMPLETED')
                 ->values();
@@ -56,9 +57,13 @@ class SaleDraftService
                 'customer_id' => $visit->customer_id,
                 'sale_date' => $now,
                 'gross_amount' => 0,
+                'discount_amount' => 0,
+                'net_amount' => 0,
+                'discount_code_snapshot' => null,
                 'advance_payments' => 0,
                 'checkout_payments' => 0,
                 'total_paid' => 0,
+                'applied_amount' => 0,
                 'outstanding_balance' => 0,
                 'status' => 'FOR_CHECKOUT',
                 'created_by' => $actor->id,
@@ -94,9 +99,21 @@ class SaleDraftService
                     'item_name_snapshot' => $line->service_name_snapshot,
                     'service_source' => $source,
                     'source_reference_code' => $line->source_reference_code,
+                    'package_enrollment_id' => $line->package_enrollment_id,
+                    'service_credit_id' => $line->service_credit_id,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'line_total' => $lineTotal,
+                    'discount_rule_id' => null,
+                    'discount_code_snapshot' => null,
+                    'discount_rule_name_snapshot' => null,
+                    'discount_calculation_type_snapshot' => null,
+                    'discount_rate_value_snapshot' => null,
+                    'discount_amount' => 0,
+                    'net_line_total' => $lineTotal,
+                    'effective_net_line_total' => $lineTotal,
+                    'applied_amount' => 0,
+                    'balance_amount' => $lineTotal,
                     'status' => 'FOR_CHECKOUT',
                     'sort_order' => $sortOrder,
                     'created_by' => $actor->id,
@@ -115,11 +132,29 @@ class SaleDraftService
                     'code' => $sale->code.'-I'.str_pad((string) ($sale->items()->count() + 1), 3, '0', STR_PAD_LEFT),
                     'source_key' => 'VISIT_RETAIL:'.$line->id,
                     'visit_retail_line_id' => $line->id,
+                    'retail_product_id' => $line->retail_product_id,
+                    'sku_snapshot' => $line->sku_snapshot ?: $line->retailProduct?->sku,
+                    'unit_cost_snapshot' => $line->retailProduct ? round((float) $line->retailProduct->unit_cost * (float) ($line->retailProduct->selling_to_basic_factor ?: 1), 2) : null,
+                    'selling_uom_snapshot' => $line->retailProduct?->selling_uom ?: $line->retailProduct?->unit,
+                    'selling_to_basic_factor_snapshot' => (float) ($line->retailProduct?->selling_to_basic_factor ?: 1),
+                    'basic_quantity_snapshot' => $line->retailProduct ? round($quantity * (float) ($line->retailProduct->selling_to_basic_factor ?: 1), 4) : $quantity,
                     'item_type' => 'PRODUCT',
+                    'assigned_personnel_id' => $line->assigned_personnel_id,
+                    'assigned_personnel_name_snapshot' => $line->assigned_personnel_name_snapshot ?: ($line->assignedPersonnel ? trim($line->assignedPersonnel->first_name.' '.$line->assignedPersonnel->last_name) : null),
                     'item_name_snapshot' => $line->item_name_snapshot,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'line_total' => $lineTotal,
+                    'discount_rule_id' => null,
+                    'discount_code_snapshot' => null,
+                    'discount_rule_name_snapshot' => null,
+                    'discount_calculation_type_snapshot' => null,
+                    'discount_rate_value_snapshot' => null,
+                    'discount_amount' => 0,
+                    'net_line_total' => $lineTotal,
+                    'effective_net_line_total' => $lineTotal,
+                    'applied_amount' => 0,
+                    'balance_amount' => $lineTotal,
                     'status' => 'FOR_CHECKOUT',
                     'sort_order' => $sortOrder,
                     'created_by' => $actor->id,
@@ -137,7 +172,7 @@ class SaleDraftService
                 ->lockForUpdate()
                 ->update(['sale_id' => $sale->id, 'visit_id' => $visit->id]);
 
-            $advance = $this->receivedPayments($sale, 'ADVANCE');
+            $advance = $this->paymentLedger->advanceAvailableForBooking($visit->booking);
             $gross = round($gross, 2);
             $totalPaid = $advance;
             $balance = max(0, round($gross - $totalPaid, 2));
@@ -147,6 +182,10 @@ class SaleDraftService
 
             $sale->update([
                 'gross_amount' => $gross,
+                'discount_amount' => 0,
+                'net_amount' => $gross,
+                'effective_net_amount' => $gross,
+                'discount_code_snapshot' => null,
                 'advance_payments' => $advance,
                 'checkout_payments' => 0,
                 'total_paid' => $totalPaid,
@@ -197,6 +236,9 @@ class SaleDraftService
             'booking_id' => $sale->booking_id,
             'customer_id' => $sale->customer_id,
             'gross_amount' => (float) $sale->gross_amount,
+            'discount_amount' => (float) ($sale->discount_amount ?? 0),
+            'net_amount' => (float) ($sale->net_amount ?? $sale->gross_amount),
+            'discount_code' => $sale->discount_code_snapshot,
             'advance_payments' => (float) $sale->advance_payments,
             'total_paid' => (float) $sale->total_paid,
             'outstanding_balance' => (float) $sale->outstanding_balance,
@@ -208,6 +250,8 @@ class SaleDraftService
                 'quantity' => $item->quantity,
                 'unit_price' => (float) $item->unit_price,
                 'line_total' => (float) $item->line_total,
+                'discount_amount' => (float) ($item->discount_amount ?? 0),
+                'net_line_total' => (float) ($item->net_line_total ?? $item->line_total),
                 'status' => $item->status,
             ])->values()->all(),
         ];

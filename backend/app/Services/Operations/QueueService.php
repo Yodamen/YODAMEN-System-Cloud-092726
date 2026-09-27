@@ -7,6 +7,7 @@ use App\Models\QueueEntry;
 use App\Models\User;
 use App\Services\Foundation\BusinessClock;
 use App\Services\Foundation\CodeSequenceService;
+use App\Services\Packages\PackageServiceCreditService;
 use App\Services\Security\AuditService;
 use Carbon\CarbonImmutable;
 use DomainException;
@@ -20,6 +21,7 @@ class QueueService
         private readonly CodeSequenceService $codes,
         private readonly AuditService $audit,
         private readonly BusinessClock $clock,
+        private readonly PackageServiceCreditService $packages,
     ) {
     }
 
@@ -40,7 +42,7 @@ class QueueService
                 throw new DomainException('Only booked reservations can be checked in.');
             }
 
-            $booking->load(['customer', 'serviceLines.assignedPersonnel', 'retailLines']);
+            $booking->load(['customer', 'serviceLines.assignedPersonnel', 'retailLines.assignedPersonnel']);
             $queue = $this->createFromBooking($actor, $booking);
 
             $booking->update(['status' => 'CHECKED_IN', 'updated_by' => $actor->id]);
@@ -82,7 +84,7 @@ class QueueService
                 throw new DomainException('Only waiting queue entries can be cancelled.');
             }
 
-            $queue->load(['booking', 'customer', 'serviceLines', 'retailLines']);
+            $queue->load(['booking', 'customer', 'serviceLines', 'retailLines.assignedPersonnel']);
             $before = $this->snapshot($queue);
             $now = $this->clock->now();
 
@@ -96,6 +98,7 @@ class QueueService
                 'status' => 'CANCELLED', 'cancelled_at' => $now, 'cancelled_by' => $actor->id,
                 'cancellation_reason' => trim($reason), 'updated_by' => $actor->id,
             ]);
+            $this->packages->cancelPendingForBooking($actor, $booking, $reason);
 
             $queue = $this->loadEntry($queue->fresh());
             $this->audit->record(
@@ -112,7 +115,7 @@ class QueueService
     {
         $status = strtoupper(trim($status));
         $query = QueueEntry::query()
-            ->with(['customer', 'booking.payments', 'branch', 'visit', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines'])
+            ->with(['customer', 'booking.payments', 'branch', 'visit', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines.assignedPersonnel'])
             ->where('business_id', $actor->business_id)
             ->whereDate('queue_date', $date);
 
@@ -140,7 +143,9 @@ class QueueService
                 'quantity' => $line->quantity, 'assigned_personnel_id' => $line->assigned_personnel_id,
             ])->values()->all(),
             'retail_items' => $queue->retailLines->map(fn ($line) => [
-                'code' => $line->code, 'item_name' => $line->item_name_snapshot, 'quantity' => $line->quantity,
+                'code' => $line->code, 'retail_product_id' => $line->retail_product_id,
+                'sku' => $line->sku_snapshot,
+                'item_name' => $line->item_name_snapshot, 'quantity' => $line->quantity,
                 'unit_price' => (float) $line->unit_price_snapshot,
             ])->values()->all(),
             'cancellation_reason' => $queue->cancellation_reason,
@@ -149,7 +154,7 @@ class QueueService
 
     private function createFromBooking(User $actor, Booking $booking): QueueEntry
     {
-        $booking->loadMissing(['customer', 'serviceLines.assignedPersonnel', 'retailLines']);
+        $booking->loadMissing(['customer', 'serviceLines.assignedPersonnel', 'retailLines.assignedPersonnel']);
         if (! $booking->serviceLines->count() && ! $booking->retailLines->count()) {
             throw new DomainException('A queue entry requires at least one service or retail line.');
         }
@@ -176,13 +181,15 @@ class QueueService
         ]);
 
         foreach ($booking->serviceLines as $index => $line) {
-            $queue->serviceLines()->create([
+            $queueLine = $queue->serviceLines()->create([
                 'booking_service_line_id' => $line->id,
                 'code' => $queue->code.'-QS-'.str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT),
                 'service_id' => $line->service_id,
                 'service_name_snapshot' => $line->service_name_snapshot,
                 'source_type' => $line->source_type,
                 'source_reference_code' => $line->source_reference_code,
+                'package_enrollment_id' => $line->package_enrollment_id,
+                'service_credit_id' => $line->service_credit_id,
                 'quantity' => $line->quantity,
                 'assigned_personnel_id' => $line->assigned_personnel_id,
                 'assigned_personnel_name_snapshot' => $line->assignedPersonnel
@@ -193,6 +200,8 @@ class QueueService
                 'created_by' => $actor->id,
                 'updated_by' => $actor->id,
             ]);
+
+            $this->packages->linkQueueLine($actor, $queue, $queueLine);
         }
 
         foreach ($booking->retailLines as $index => $line) {
@@ -200,9 +209,13 @@ class QueueService
                 'booking_retail_line_id' => $line->id,
                 'code' => $queue->code.'-QR-'.str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT),
                 'legacy_retail_item_code' => $line->legacy_retail_item_code,
+                'retail_product_id' => $line->retail_product_id,
+                'sku_snapshot' => $line->sku_snapshot,
                 'item_name_snapshot' => $line->item_name_snapshot,
                 'quantity' => $line->quantity,
                 'unit_price_snapshot' => $line->unit_price_snapshot,
+                'assigned_personnel_id' => $line->assigned_personnel_id,
+                'assigned_personnel_name_snapshot' => $line->assigned_personnel_name_snapshot ?: ($line->assignedPersonnel ? trim($line->assignedPersonnel->first_name.' '.$line->assignedPersonnel->last_name) : null),
                 'notes' => $line->notes,
                 'sort_order' => $line->sort_order,
                 'created_by' => $actor->id,
@@ -215,7 +228,7 @@ class QueueService
 
     private function loadEntry(QueueEntry $queue): QueueEntry
     {
-        return $queue->load(['customer', 'booking.payments', 'branch', 'visit', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines']);
+        return $queue->load(['customer', 'booking.payments', 'branch', 'visit', 'serviceLines.service', 'serviceLines.assignedPersonnel', 'retailLines.assignedPersonnel']);
     }
 
     private function applyLegacyPriority(Collection $rows): Collection

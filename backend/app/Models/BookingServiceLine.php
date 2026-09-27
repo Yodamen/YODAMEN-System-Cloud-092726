@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BookingServiceLine extends Model
 {
@@ -17,6 +18,8 @@ class BookingServiceLine extends Model
         'service_name_snapshot',
         'source_type',
         'source_reference_code',
+        'package_enrollment_id',
+        'service_credit_id',
         'quantity',
         'assigned_personnel_id',
         'notes',
@@ -47,4 +50,20 @@ class BookingServiceLine extends Model
     {
         return $this->belongsTo(Personnel::class, 'assigned_personnel_id');
     }
+
+    public function packageEnrollment(): BelongsTo
+    {
+        return $this->belongsTo(PackageEnrollment::class);
+    }
+
+    public function serviceCredit(): BelongsTo
+    {
+        return $this->belongsTo(ServiceCredit::class);
+    }
+
+    public function visitServiceLines(): HasMany
+    {
+        return $this->hasMany(VisitServiceLine::class);
+    }
 }
+

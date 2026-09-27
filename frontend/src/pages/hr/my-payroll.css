@@ -1,0 +1,148 @@
+.my-payroll-identity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.my-payroll-identity > div {
+  display: grid;
+  gap: 3px;
+}
+
+.my-payroll-identity > div strong {
+  font-size: .92rem;
+}
+
+.my-payroll-identity > div span,
+.my-payroll-identity p {
+  color: var(--muted);
+  font-size: .7rem;
+}
+
+.my-payroll-identity p {
+  margin: 0;
+  text-align: right;
+}
+
+.my-payroll-summary-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.my-payroll-summary-grid .metric-card small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: .62rem;
+  line-height: 1.35;
+}
+
+.my-payroll-two-column {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, .9fr);
+  gap: 12px;
+}
+
+.my-payroll-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+}
+
+.my-payroll-stat-grid > div {
+  display: grid;
+  gap: 4px;
+  min-height: 68px;
+  padding: 10px 12px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: #fbfbfc;
+}
+
+.my-payroll-stat-grid > div:nth-child(3n) {
+  border-right: 0;
+}
+
+.my-payroll-stat-grid > div:nth-last-child(-n + 3) {
+  border-bottom: 0;
+}
+
+.my-payroll-stat-grid span {
+  color: var(--muted);
+  font-size: .62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.my-payroll-stat-grid strong {
+  font-size: .88rem;
+}
+
+@media (max-width: 1050px) {
+  .my-payroll-summary-grid,
+  .my-payroll-two-column {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .my-payroll-two-column {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .my-payroll-identity,
+  .my-payroll-summary-grid,
+  .my-payroll-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .my-payroll-identity p {
+    text-align: left;
+  }
+
+  .my-payroll-stat-grid > div {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .my-payroll-stat-grid > div:last-child {
+    border-bottom: 0;
+  }
+}
+
+/* 100K7N14D: keep all five My Payroll summary cards on one desktop row. */
+@media (min-width: 861px) {
+  .metric-grid.my-payroll-summary-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .my-payroll-summary-grid > .metric-card {
+    min-width: 0;
+    padding: 10px 11px;
+  }
+
+  .my-payroll-summary-grid .metric-card span {
+    font-size: .68rem;
+    line-height: 1.2;
+  }
+
+  .my-payroll-summary-grid .metric-card strong {
+    font-size: 1rem;
+    line-height: 1.15;
+  }
+
+  .my-payroll-summary-grid .metric-card small {
+    font-size: .58rem;
+    line-height: 1.25;
+  }
+}
+
+@media (max-width: 860px) and (min-width: 681px) {
+  .metric-grid.my-payroll-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
