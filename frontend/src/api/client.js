@@ -12,6 +12,18 @@ export const api = axios.create({
   },
 })
 
+api.interceptors.response.use((response) => {
+  if (['post', 'put', 'patch', 'delete'].includes(response.config.method) && !response.config.url?.includes('/auth/logout')) {
+    window.dispatchEvent(new Event('yodamen-subscription-changed'))
+  }
+  return response
+}, (error) => {
+  if (error.response?.data?.code === 'SUBSCRIPTION_READ_ONLY') {
+    window.dispatchEvent(new Event('yodamen-subscription-changed'))
+  }
+  return Promise.reject(error)
+})
+
 export async function initializeCsrf() {
   await axios.get(`${backendBaseUrl}/sanctum/csrf-cookie`, {
     withCredentials: true,

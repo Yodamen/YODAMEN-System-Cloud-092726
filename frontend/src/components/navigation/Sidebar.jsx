@@ -164,6 +164,7 @@ export default function Sidebar({ collapsed, onToggle }) {
             <span>{user?.role?.name}</span>
           </div>
           <div className="sidebar-footer-system">
+            <span>{bootstrap?.subscription?.name || user?.subscription?.name || 'Premium'} {bootstrap?.subscription?.status === 'trial' ? 'trial' : 'plan'}{bootstrap?.subscription?.is_read_only ? ' · Read only' : ''}</span>
             <strong>{bootstrap?.branding?.business_display_name || 'YODAMEN'}</strong>
             <span>{bootstrap?.branding?.subtitle || bootstrap?.business?.name || 'Grooming Lounge'}</span>
           </div>

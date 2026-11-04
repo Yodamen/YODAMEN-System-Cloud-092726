@@ -166,6 +166,7 @@ class AuthController extends Controller
     private function presentUser(User $user): array
     {
         return [
+            'subscription' => app(\App\Services\Subscriptions\SubscriptionService::class)->snapshot($user->business),
             'id' => $user->id,
             'code' => $user->code,
             'username' => $user->username,

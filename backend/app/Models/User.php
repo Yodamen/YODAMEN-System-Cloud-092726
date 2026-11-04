@@ -94,6 +94,10 @@ class User extends Authenticatable
 
     public function hasPermission(string $module, string $action): bool
     {
+        if (! app(\App\Services\Subscriptions\SubscriptionService::class)->allowsModule($this->business, strtolower(trim($module)))) {
+            return false;
+        }
+
         if (! $this->isActive() || ! $this->role || ! $this->role->active) {
             return false;
         }

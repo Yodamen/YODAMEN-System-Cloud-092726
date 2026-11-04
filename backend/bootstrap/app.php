@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->statefulApi();
         $middleware->append(RequestCorrelationId::class);
         $middleware->alias([
+            'subscription' => \App\Http\Middleware\RequireSubscriptionModule::class,
             'permission' => RequirePermission::class,
         ]);
     })

@@ -15,6 +15,7 @@ import IncentiveRulesPage from '../pages/admin/IncentiveRulesPage'
 import UsersRolesPage from '../pages/admin/UsersRolesPage'
 import DevelopmentResetPage from '../pages/admin/DevelopmentResetPage'
 import OpeningBalancesPage from '../pages/admin/OpeningBalancesPage'
+import SubscriptionPage from '../pages/admin/SubscriptionPage'
 import AttendancePage from '../pages/hr/AttendancePage'
 import MyAttendancePage from '../pages/hr/MyAttendancePage'
 import LeaveManagementPage from '../pages/hr/LeaveManagementPage'
@@ -320,10 +321,11 @@ export const router = createBrowserRouter([
             path: '/admin/opening-balances',
             element: (
               <SuperAdminRoute>
-                <OpeningBalancesPage />
+                <ModuleRoute module="opening-balances"><OpeningBalancesPage /></ModuleRoute>
               </SuperAdminRoute>
             ),
           },
+          { path: '/admin/subscription', element: <SuperAdminRoute><SubscriptionPage /></SuperAdminRoute> },
           {
             path: '/admin/development-reset',
             element: (

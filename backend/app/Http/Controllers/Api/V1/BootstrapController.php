@@ -28,6 +28,7 @@ class BootstrapController extends Controller
             : null;
 
         return response()->json([
+            'subscription' => app(\App\Services\Subscriptions\SubscriptionService::class)->snapshot($user->business),
             'system' => [
                 'name' => config('app.name'),
                 'timezone' => $clock->timezone(),

@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react'
 import { api, initializeCsrf } from '../api/client'
+import { canPerform, hasModuleAccess as subscriptionAllows } from '../features/auth/subscriptionAccess'
 
 const AuthContext = createContext(null)
 
@@ -89,19 +90,24 @@ export function AuthProvider({ children }) {
     return response.data.user
   }, [])
 
+  useEffect(() => {
+    let timeout
+    const refresh = () => {
+      window.clearTimeout(timeout)
+      timeout = window.setTimeout(() => { void loadBootstrap().catch(() => {}) }, 100)
+    }
+    window.addEventListener('yodamen-subscription-changed', refresh)
+    return () => {
+      window.clearTimeout(timeout)
+      window.removeEventListener('yodamen-subscription-changed', refresh)
+    }
+  }, [loadBootstrap])
+
+  const subscription = bootstrap?.subscription ?? user?.subscription
+  const hasModuleAccess = useCallback((module) => subscriptionAllows(subscription, module), [subscription])
   const hasPermission = useCallback(
-    (module, action = 'VIEW') => {
-      if (!user) {
-        return false
-      }
-
-      if (user.role?.is_super_admin) {
-        return true
-      }
-
-      return user.permissions?.includes(`${module}.${action}`) ?? false
-    },
-    [user],
+    (module, action = 'VIEW') => canPerform(user, subscription, module, action),
+    [user, subscription],
   )
 
   const value = useMemo(
@@ -115,6 +121,8 @@ export function AuthProvider({ children }) {
       refreshSession,
       loadBootstrap,
       hasPermission,
+      hasModuleAccess,
+      subscription,
     }),
     [
       user,
@@ -126,6 +134,8 @@ export function AuthProvider({ children }) {
       refreshSession,
       loadBootstrap,
       hasPermission,
+      hasModuleAccess,
+      subscription,
     ],
   )
 

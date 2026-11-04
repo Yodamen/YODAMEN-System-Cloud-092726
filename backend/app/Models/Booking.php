@@ -12,6 +12,23 @@ class Booking extends Model
 {
     use HasFactory;
 
+    public function save(array $options = [])
+    {
+        if ($this->exists) {
+            return parent::save($options);
+        }
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($options) {
+            $this->trial_counted = app(\App\Services\Subscriptions\TrialUsageService::class)
+                ->reserve((int) $this->business_id, null);
+            if (! parent::save($options)) {
+                throw new \RuntimeException('The record was not saved. Trial usage was rolled back.');
+            }
+
+            return true;
+        });
+    }
+
     protected $fillable = [
         'business_id',
         'branch_id',
@@ -33,6 +50,7 @@ class Booking extends Model
     protected function casts(): array
     {
         return [
+            'trial_counted' => 'boolean',
             'booking_date' => 'date:Y-m-d',
             'cancelled_at' => 'immutable_datetime',
         ];

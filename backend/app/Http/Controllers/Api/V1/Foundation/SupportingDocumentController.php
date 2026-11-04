@@ -24,6 +24,8 @@ class SupportingDocumentController extends Controller
             'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png,webp,doc,docx,xls,xlsx,csv', 'max:10240'],
         ]);
 
+        abort_unless(app(\App\Services\Subscriptions\SubscriptionService::class)->allowsModule($request->user()->business, $data['module']), 403, 'This feature is not included in your subscription.');
+
         try {
             $row = $this->documents->uploadTemp($request->user(), $request->file('file'), $data['module'], $data['purpose'] ?? null);
             return response()->json([

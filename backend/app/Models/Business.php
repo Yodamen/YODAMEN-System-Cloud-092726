@@ -5,10 +5,25 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Business extends Model
 {
     use HasFactory;
+
+    protected $hidden = ['license_token'];
+
+    protected function casts(): array
+    {
+        return ['license_revision' => 'integer', 'trial_uses' => 'integer'];
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (Business $business) {
+            $business->license_installation_id ??= (string) Str::uuid();
+        });
+    }
 
     protected $fillable = [
         'code',

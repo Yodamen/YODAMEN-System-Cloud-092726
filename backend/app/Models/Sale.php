@@ -11,6 +11,23 @@ class Sale extends Model
 {
     use HasFactory;
 
+    public function save(array $options = [])
+    {
+        if ($this->exists) {
+            return parent::save($options);
+        }
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($options) {
+            $this->trial_counted = app(\App\Services\Subscriptions\TrialUsageService::class)
+                ->reserve((int) $this->business_id, $this->booking_id ? (int) $this->booking_id : null);
+            if (! parent::save($options)) {
+                throw new \RuntimeException('The record was not saved. Trial usage was rolled back.');
+            }
+
+            return true;
+        });
+    }
+
     protected $fillable = [
         'business_id', 'branch_id', 'code', 'visit_id', 'booking_id', 'customer_id', 'sale_channel', 'sale_date',
         'gross_amount', 'discount_amount', 'net_amount', 'discount_code_snapshot', 'promotion_codes_snapshot', 'advance_payments', 'checkout_payments', 'total_paid', 'applied_amount', 'outstanding_balance',
@@ -21,6 +38,7 @@ class Sale extends Model
     protected function casts(): array
     {
         return [
+            'trial_counted' => 'boolean',
             'sale_date' => 'immutable_datetime',
             'financial_finalized_at' => 'immutable_datetime',
             'gross_amount' => 'decimal:2',

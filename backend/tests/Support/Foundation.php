@@ -8,9 +8,15 @@ use App\Models\ReferenceValue;
 use App\Models\ChartOfAccount;
 use App\Models\AccountingPaymentMethodMapping;
 
-function foundationUser(string $roleCode = 'ROLE-SA', array $attributes = []): User
+require_once __DIR__.'/SubscriptionLicenses.php';
+
+function foundationUser(string $roleCode = 'ROLE-SA', array $attributes = [], string $tier = 'premium'): User
 {
     $business = Business::query()->where('code', 'YDM')->firstOrFail();
+    // Existing business tests exercise the full app under a valid Premium license.
+    if (! $business->license_token) {
+        $business->forceFill(['license_token' => subscriptionTestCode($business, $tier), 'license_revision' => 1])->save();
+    }
     $branch = Branch::query()->where('code', 'YDM-SJC')->firstOrFail();
     $role = Role::query()->where('code', $roleCode)->firstOrFail();
 
