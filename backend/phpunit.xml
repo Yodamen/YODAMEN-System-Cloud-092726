@@ -19,7 +19,11 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <env name="APP_KEY" value="base64:dGVzdC10ZXN0LXRlc3QtdGVzdC10ZXN0LXRlc3QtdGU="/>
+        <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost,localhost:5173,127.0.0.1,127.0.0.1:5173"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="YODAMEN_SUPER_ADMIN_USERNAME" value="admin"/>
+        <env name="YODAMEN_SUPER_ADMIN_ACCESS_CODE" value="Temporary123"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>

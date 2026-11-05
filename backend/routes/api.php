@@ -77,12 +77,15 @@ Route::prefix('v1')->group(function () {
     Route::get('/public/branding/logo/{business}', [PublicBrandingController::class, 'logo']);
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', \App\Http\Middleware\RequireSubscriptionState::class])->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::put('/auth/access-code', [AuthController::class, 'changeAccessCode']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 
         Route::get('/bootstrap', BootstrapController::class);
+
+        Route::get('/subscription', [\App\Http\Controllers\Api\V1\SubscriptionController::class, 'show']);
+        Route::post('/subscription/activate', [\App\Http\Controllers\Api\V1\SubscriptionController::class, 'activate'])->middleware('throttle:10,1');
 
 
         Route::get('/workflow-reasons', [WorkflowReasonController::class, 'index']);
@@ -424,8 +427,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/development-reset/execute', [DevelopmentResetController::class, 'execute']);
             Route::post('/development-reset/cancel', [DevelopmentResetController::class, 'cancel']);
 
-            Route::get('/opening-balances', [OpeningBalanceController::class, 'index']);
-            Route::post('/opening-balances', [OpeningBalanceController::class, 'store']);
+            Route::get('/opening-balances', [OpeningBalanceController::class, 'index'])->middleware('subscription:opening-balances');
+            Route::post('/opening-balances', [OpeningBalanceController::class, 'store'])->middleware('subscription:opening-balances');
 
             Route::get('/business-setup', [BusinessSetupController::class, 'show'])
                 ->middleware('permission:business-setup,VIEW');

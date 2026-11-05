@@ -23,6 +23,14 @@ class RequirePermission
         }
 
         if (! $user->hasPermission($module, $action)) {
+            if (! app(\App\Services\Subscriptions\SubscriptionService::class)->allowsModule($user->business, $module)) {
+                return new JsonResponse([
+                    'message' => 'This feature is not included in your subscription.',
+                    'code' => 'SUBSCRIPTION_UPGRADE_REQUIRED',
+                    'module' => $module,
+                ], 403);
+            }
+
             $this->audit->record(
                 action: 'ACCESS_DENIED',
                 module: strtolower(trim($module)),

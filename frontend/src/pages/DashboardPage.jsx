@@ -7,7 +7,7 @@ export default function DashboardPage() {
     <div className="page-stack">
       <section className="page-heading">
         <h1>Dashboard</h1>
-        <span className="status-pill success">Phase 2C</span>
+        <span className="status-pill success">{bootstrap?.subscription?.name || 'Basic'} plan</span>
       </section>
 
       <section className="metric-grid">
@@ -36,17 +36,15 @@ export default function DashboardPage() {
       <section className="content-card">
         <div className="card-header">
           <div>
-            <h2>Migration status</h2>
-            <p>Master records are established before operational transactions are migrated.</p>
+            <h2>Your subscription</h2>
+            <p>Feature access follows your plan and the permissions assigned to your account.</p>
+            {['trial', 'trial_exhausted'].includes(bootstrap?.subscription?.status) && <p>Premium trial: {bootstrap.subscription.trial_used} of {bootstrap.subscription.trial_limit} activities used.</p>}
+            {bootstrap?.subscription?.is_read_only && <p role="status">Your trial or license has ended. Existing records remain available to view. Contact your provider for activation.</p>}
+            {bootstrap?.subscription?.status === 'active' && <p>License duration: permanent</p>}
           </div>
         </div>
         <div className="foundation-checks">
-          <div><span>✓</span> Sanctum session authentication</div>
-          <div><span>✓</span> Role and action permissions</div>
-          <div><span>✓</span> Reference Lists</div>
-          <div><span>✓</span> Effective-dated Services &amp; Pricing</div>
-          <div><span>✓</span> Personnel and compensation profile</div>
-          <div><span>✓</span> SQL audit trail</div>
+          {bootstrap?.subscription?.feature_catalog?.map((feature) => <div key={feature.code}><span>{feature.included ? '✓' : '—'}</span> {feature.name}: {feature.included ? 'Included' : 'Upgrade required'}</div>)}
         </div>
       </section>
     </div>

@@ -165,6 +165,7 @@ class SupportingDocumentService
 
     public function canDownload(User $actor, SupportingDocument $row): bool
     {
+        if (! app(\App\Services\Subscriptions\SubscriptionService::class)->allowsModule($actor->business, $row->module)) return false;
         if ((int) $row->business_id !== (int) $actor->business_id) return false;
         if ($row->state !== 'ATTACHED') return (int) $row->uploaded_by === (int) $actor->id;
         if (! $row->entity_type || ! $this->canViewEntityType($actor, $row->entity_type)) return false;
