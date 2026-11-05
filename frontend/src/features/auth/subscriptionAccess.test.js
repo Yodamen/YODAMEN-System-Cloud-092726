@@ -14,7 +14,7 @@ test('subscribed features still require the employee action permission', () => {
   assert.equal(canPerform(employee, subscription, 'sales'), true)
   assert.equal(canPerform(employee, subscription, 'sales', 'EDIT'), false)
 })
-test('expired and exhausted subscriptions allow viewing but prevent mutations', () => {
+test('exhausted trials and invalid subscriptions allow viewing but prevent mutations', () => {
   const subscription = { modules: ['sales'], is_read_only: true }
   assert.equal(canPerform(admin, subscription, 'sales', 'VIEW'), true)
   assert.equal(canPerform(admin, subscription, 'sales', 'EDIT'), false)

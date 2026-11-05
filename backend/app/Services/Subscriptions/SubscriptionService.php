@@ -18,7 +18,6 @@ class SubscriptionService
         $limit = (int) config('subscriptions.trial_limit');
         $used = (int) ($business?->trial_uses ?? 0);
         $status = $used >= $limit ? 'trial_exhausted' : 'trial';
-        $expiresAt = null;
         $readOnly = $used >= $limit;
         if ($business?->license_token) {
             try {
@@ -27,9 +26,9 @@ class SubscriptionService
                     throw new DomainException('License revision mismatch.');
                 }
                 $tier = $claims['tier'];
-                $expiresAt = $claims['expires_at'] ?? null;
-                $status = $expiresAt !== null && now()->timestamp >= $expiresAt ? 'expired' : 'active';
-                $readOnly = $status === 'expired';
+                // All paid tiers are permanent, including previously issued dated codes.
+                $status = 'active';
+                $readOnly = false;
             } catch (DomainException) {
                 $status = 'invalid';
                 $tier = 'basic';
@@ -48,7 +47,7 @@ class SubscriptionService
             'name' => $plan['name'],
             'status' => $status,
             'is_read_only' => $readOnly,
-            'expires_at' => $expiresAt === null ? null : \Carbon\CarbonImmutable::createFromTimestamp($expiresAt)->toIso8601String(),
+            'expires_at' => null,
             'trial_limit' => $limit,
             'trial_used' => $used,
             'trial_remaining' => max(0, $limit - $used),
@@ -72,9 +71,6 @@ class SubscriptionService
         return DB::transaction(function () use ($actor, $token) {
             $business = Business::query()->lockForUpdate()->findOrFail($actor->business_id);
             $claims = $this->licenses->verify($token, $business);
-            if (($claims['expires_at'] ?? null) !== null && now()->timestamp >= $claims['expires_at']) {
-                throw new DomainException('This activation code has expired. Request a renewed code.');
-            }
             if ($business->license_token === $token && (int) $business->license_revision === $claims['revision']) {
                 return $business;
             }

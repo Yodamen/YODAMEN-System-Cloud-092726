@@ -1,0 +1,11 @@
+# Managed by the Yodamen patch updater. Keep this file for future restarts.
+services:
+  app:
+    build:
+      context: ./.yodamen-releases/RELEASE_VERSION
+      dockerfile: Dockerfile
+    image: yodamen-local:RELEASE_VERSION
+    volumes:
+      - yodamen_app_state:/var/www/html/storage/framework
+volumes:
+  yodamen_app_state:

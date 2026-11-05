@@ -4,7 +4,7 @@
 declare(strict_types=1);
 $options = getopt('', ['key-file:', 'installation:', 'business:', 'tier:', 'revision:', 'expires:', 'out:']);
 $fail = function (string $message): never { fwrite(STDERR, $message."\n"); exit(1); };
-foreach (['key-file', 'installation', 'business', 'tier', 'revision', 'expires'] as $name) {
+foreach (['key-file', 'installation', 'business', 'tier', 'revision'] as $name) {
     if (! isset($options[$name]) || ! is_string($options[$name])) $fail('Required option: --'.$name);
 }
 if (! preg_match('/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i', $options['installation'])) $fail('Invalid installation ID.');
@@ -12,12 +12,9 @@ if (! preg_match('/^[A-Za-z0-9_-]{1,100}$/', $options['business'])) $fail('Inval
 if (! in_array($options['tier'], ['basic', 'standard', 'premium'], true)) $fail('Tier must be basic, standard or premium.');
 $revision = filter_var($options['revision'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 if ($revision === false) $fail('Revision must be a positive integer higher than the installed revision.');
-$expires = null;
-if ($options['expires'] !== 'never') {
-    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $options['expires'], new DateTimeZone('Asia/Manila'));
-    if (! $date || $date->format('Y-m-d') !== $options['expires']) $fail('Expiry must be YYYY-MM-DD or never.');
-    $expires = $date->modify('+1 day')->getTimestamp();
-    if ($expires <= time()) $fail('Expiry must be today or a future date.');
+// Accept the old permanent flag for compatibility; paid plans have no expiry.
+if (isset($options['expires']) && $options['expires'] !== 'never') {
+    $fail('Paid plans are permanent. Omit --expires or use --expires=never.');
 }
 if (! is_file($options['key-file'])) $fail('Signing key file does not exist.');
 $secret = base64_decode(trim(file_get_contents($options['key-file'])), true);
@@ -28,7 +25,7 @@ $encode = fn (string $value) => rtrim(strtr(base64_encode($value), '+/', '-_'), 
 $payload = $encode(json_encode([
     'version' => 1, 'installation_id' => $options['installation'],
     'business_code' => $options['business'], 'tier' => $options['tier'],
-    'revision' => $revision, 'expires_at' => $expires,
+    'revision' => $revision, 'expires_at' => null,
 ], JSON_THROW_ON_ERROR));
 $token = 'YDM1.'.$payload.'.'.$encode(sodium_crypto_sign_detached('YDM1.'.$payload, $secret));
 if (isset($options['out'])) {

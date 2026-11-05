@@ -94,29 +94,48 @@ test('trial exhaustion preserves read access blocks writes and permits activatio
     expect($this->business->fresh()->trial_uses)->toBe(50);
 });
 
-test('license expires at its signed timestamp and can be renewed with a higher revision', function () {
-    $expiry = now()->addMinute()->timestamp;
-    $token = subscriptionTestCode($this->business, 'premium', 1, ['expires_at' => $expiry]);
+test('all paid tiers remain active after years and do not consume trial quota', function (string $tier) {
+    $token = subscriptionTestCode($this->business, $tier, 1);
+    $this->actingAs($this->admin)->postJson('/api/v1/subscription/activate', ['activation_code' => $token])->assertOk();
+    $this->travel(10)->years();
+    $this->admin->unsetRelation('business');
+    $this->getJson('/api/v1/subscription')->assertOk()
+        ->assertJsonPath('subscription.status', 'active')
+        ->assertJsonPath('subscription.tier', $tier)
+        ->assertJsonPath('subscription.is_read_only', false)
+        ->assertJsonPath('subscription.expires_at', null);
+    trialSale($this, 'PERMANENT-SALE');
+    expect($this->business->fresh()->trial_uses)->toBe(0);
+    $this->travelBack();
+})->with(['basic', 'standard', 'premium']);
+
+test('previously issued dated licenses remain permanent after their old timestamp', function () {
+    $token = subscriptionTestCode($this->business, 'premium', 1, ['expires_at' => now()->addMinute()->timestamp]);
     $this->actingAs($this->admin)->postJson('/api/v1/subscription/activate', ['activation_code' => $token])->assertOk();
     $this->travel(2)->minutes();
     $this->admin->unsetRelation('business');
-    $this->getJson('/api/v1/subscription')->assertOk()->assertJsonPath('subscription.status', 'expired');
-    $this->getJson('/api/v1/operations/customers')->assertOk();
-    $this->postJson('/api/v1/admin/business-setup/branches', [])->assertForbidden();
-    $renewed = subscriptionTestCode($this->business, 'premium', 2, ['expires_at' => now()->addYear()->timestamp]);
-    $this->postJson('/api/v1/subscription/activate', ['activation_code' => $renewed])->assertOk()->assertJsonPath('subscription.status', 'active');
+    $this->getJson('/api/v1/subscription')->assertOk()
+        ->assertJsonPath('subscription.status', 'active')
+        ->assertJsonPath('subscription.expires_at', null)
+        ->assertJsonPath('subscription.is_read_only', false);
+    trialSale($this, 'LEGACY-PERMANENT-SALE');
     $this->travelBack();
 });
 
-test('expired codes cannot be activated and direct tier or quota changes are not mass assignable', function () {
-    $expired = subscriptionTestCode($this->business, 'premium', 1, ['expires_at' => now()->subSecond()->timestamp]);
-    $this->actingAs($this->admin)->postJson('/api/v1/subscription/activate', ['activation_code' => $expired])->assertUnprocessable();
-    $this->business->fill(['trial_uses' => 0, 'license_token' => $expired, 'license_revision' => 999]);
-    expect($this->business->isDirty('license_token'))->toBeFalse()
-        ->and($this->business->isDirty('license_revision'))->toBeFalse();
+test('previously issued past-dated codes can activate as permanent licenses', function () {
+    $token = subscriptionTestCode($this->business, 'standard', 1, ['expires_at' => now()->subYear()->timestamp]);
+    $this->actingAs($this->admin)->postJson('/api/v1/subscription/activate', ['activation_code' => $token])
+        ->assertOk()->assertJsonPath('subscription.status', 'active')->assertJsonPath('subscription.expires_at', null);
 });
 
-test('license expiry and trial consumption are scoped to one business', function () {
+test('direct tier or quota changes are not mass assignable', function () {
+    $this->business->fill(['trial_uses' => 999, 'license_token' => 'forged', 'license_revision' => 999]);
+    expect($this->business->isDirty('license_token'))->toBeFalse()
+        ->and($this->business->isDirty('license_revision'))->toBeFalse()
+        ->and($this->business->isDirty('trial_uses'))->toBeFalse();
+});
+
+test('licenses and trial consumption are scoped to one business', function () {
     trialBooking($this, 'TENANT-ONE');
     $other = Business::query()->create(['code' => 'OTHER', 'name' => 'Other business', 'status' => 'ACTIVE', 'timezone' => 'Asia/Manila', 'currency' => 'PHP']);
     expect($other->fresh()->trial_uses)->toBe(0)

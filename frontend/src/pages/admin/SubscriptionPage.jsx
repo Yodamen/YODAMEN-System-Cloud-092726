@@ -48,7 +48,7 @@ export default function SubscriptionPage() {
         <h2>{details.subscription.name} plan</h2>
         <p>{details.subscription.status === 'active' ? 'Your license is active.' : details.subscription.status === 'trial' ? 'You are trying Premium features.' : 'Your subscription is read only. Activate a valid license to continue.'}</p>
         {['trial', 'trial_exhausted'].includes(details.subscription.status) && <p>Premium trial: {details.subscription.trial_used} of {details.subscription.trial_limit} activities used. {details.subscription.trial_remaining} remaining.</p>}
-        <p>{details.subscription.expires_at ? `License expires: ${new Date(details.subscription.expires_at).toLocaleString()}` : details.subscription.status === 'active' ? 'License duration: permanent' : 'Trial is limited by usage rather than a calendar date.'}</p>
+        <p>{details.subscription.status === 'active' ? 'License duration: permanent' : 'Trial is limited by usage rather than a calendar date.'}</p>
         <label className="form-field"><span>Installation ID</span><input readOnly value={details.installation_id} /></label>
         <p>Business code: <strong>{details.business_code}</strong></p>
         <p>License revision: {details.revision}</p>

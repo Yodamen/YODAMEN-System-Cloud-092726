@@ -40,7 +40,7 @@ export default function DashboardPage() {
             <p>Feature access follows your plan and the permissions assigned to your account.</p>
             {['trial', 'trial_exhausted'].includes(bootstrap?.subscription?.status) && <p>Premium trial: {bootstrap.subscription.trial_used} of {bootstrap.subscription.trial_limit} activities used.</p>}
             {bootstrap?.subscription?.is_read_only && <p role="status">Your trial or license has ended. Existing records remain available to view. Contact your provider for activation.</p>}
-            {bootstrap?.subscription?.expires_at && <p>License expires: {new Date(bootstrap.subscription.expires_at).toLocaleString()}</p>}
+            {bootstrap?.subscription?.status === 'active' && <p>License duration: permanent</p>}
           </div>
         </div>
         <div className="foundation-checks">

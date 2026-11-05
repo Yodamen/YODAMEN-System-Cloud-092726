@@ -1,4 +1,4 @@
-# Plans activation trial and expiry
+# Permanent plans and Premium trial
 
 Implementation lives in this repository's backend and frontend. No private signing
 key is committed. Admin > Subscription is available to active Super Admin users.
@@ -29,16 +29,19 @@ transaction, so concurrent creations cannot both reserve the last available use.
 At 50 activities, existing records remain viewable but HTTP mutation endpoints
 are blocked. Authentication, changing your own access code and license activation
 remain available. Activate a paid plan to continue. The trial is usage based, not
-a guessed number of days. It does not restart after a paid license expires.
+a guessed number of days. Basic, Standard and Premium paid plans are permanent.
 
-## Expiry and renewal
+## Permanent paid plans
 
-Codes include a signed expires_at timestamp or null for an explicitly permanent
-license. At expiry, the business retains read access to its licensed modules;
-writes require renewal. An expired code cannot be newly activated. Renewals and
-plan changes need a revision higher than the installed revision. Older codes
-cannot be replayed after an accepted newer revision. Re-entering the exact current
-valid code is idempotent. Data is never deleted on expiry or downgrade.
+Basic, Standard and Premium never expire and have no trial activity cap after
+activation. Only the unactivated Premium trial ends at 50 activities. New codes
+contain expires_at: null. Previously issued signed codes with dates are also
+permanent under this policy; the backend ignores their old date while continuing
+to verify the signature, installation, business, tier and revision.
+
+Plan changes need a revision higher than the installed revision. Older revisions
+cannot be replayed after accepting a newer revision. Re-entering the exact current
+code is idempotent. Records are preserved when activating or changing plans.
 
 This is offline license verification. Customers controlling the server/source can
 modify it, restore old databases or change the clock. This is not hardware-bound
@@ -54,17 +57,22 @@ public key in backend/config/subscriptions.php; do not regenerate it casually.
 ```sh
 php tools/issue-license.php --key-file=/private/path/signing.key \
   --installation=CLIENT_UUID --business=YDM --tier=standard \
-  --revision=1 --expires=2027-12-31 --out=/private/path/activation.txt
+  --revision=1 --out=/private/path/activation.txt
 ```
 
-Replace placeholders. The sample date is illustrative, not a default term. Date
-expiry includes that full day in Asia/Manila and ends at midnight starting the next
-day. Use --expires=never only for a permanent license. Send only the activation
+Replace placeholders and choose a revision higher than the currently installed
+revision. No expiry option is needed. The old --expires=never flag is accepted for
+compatibility; date values are rejected. Send only the activation
 code to the customer. They paste it into Admin > Subscription. The signing key
 must never be included in installers, frontend files, environment files on the
 client's server, or commits.
 
 ## Apply to an installed application
+
+Use the maintained [Docker patch workflow](../deployment/patch/PATCH.md) for
+existing installer-based deployments. The builder and Windows/Mac launchers live
+in deployment/patch in this repository. See its VERIFICATION.md for the tested
+upgrade, license preservation and recovery checks.
 
 Back up the installed database and uploads. Deploy frontend/backend together, then
 run php artisan migrate and php artisan optimize:clear in the correct runtime.
