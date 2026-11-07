@@ -111,6 +111,7 @@ python3 deployment/patch/package-patch.py \
 ```
 
 The builder copies tracked backend/frontend working files, including tracked edits,
-and records their digest. It excludes runtime environment files, uploads, database
+and records their digest. New untracked app files must be staged/committed first
+or explicitly included with --include-untracked for a test build. It excludes runtime environment files, uploads, database
 dumps, dependency folders and publisher tools/private signing keys. Source scripts
 live in the app repository; packaged snapshots are deployment artifacts.

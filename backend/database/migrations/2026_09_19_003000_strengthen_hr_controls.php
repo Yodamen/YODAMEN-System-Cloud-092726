@@ -44,7 +44,7 @@ return new class extends Migration
                 $table->foreignId('personnel_id')->constrained('personnel')->cascadeOnUpdate()->restrictOnDelete();
                 $table->date('effective_from');
                 $table->date('effective_until')->nullable();
-                $table->foreignId('compensation_rule_reference_id')->constrained('reference_values')->cascadeOnUpdate()->restrictOnDelete();
+                $table->foreignId('compensation_rule_reference_id')->constrained('reference_values', indexName: 'personnel_comp_terms_rule_fk')->cascadeOnUpdate()->restrictOnDelete();
                 $table->decimal('hourly_rate', 12, 2)->default(0);
                 $table->boolean('ot_entitled')->default(false);
                 $table->decimal('ot_multiplier', 6, 3)->nullable();

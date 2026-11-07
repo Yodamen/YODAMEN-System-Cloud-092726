@@ -3,7 +3,7 @@
 The application source remains in this repository's backend and frontend folders.
 These deployment folders contain maintained tools, not separate application copies.
 
-- installer: build a fresh installation archive for a new computer. Read
+- installer: build an archive with clean new-client setup or SQL-dump restore for a new computer. Read
   [installer instructions](installer/README.md) and [verification](installer/VERIFICATION.md).
 - patch: build updates for existing Docker installations. Read
   [patch instructions](patch/PATCH.md) and [verification](patch/VERIFICATION.md).
@@ -20,11 +20,14 @@ yodamen-local:VERSION. Keep generated packages outside Git. Builders take filter
 tracked backend/frontend working files, including tracked edits, and record the
 source digest and whether app changes were uncommitted. Client release packages
 should be reproducible from an accepted commit; local test packages may include
-working changes as recorded in their manifest.
+working changes as recorded in their manifest. If new backend/frontend files are
+untracked, builders refuse to omit them silently. Commit or stage them first, or
+pass --include-untracked explicitly for a test package; the manifest records it.
 
 Both archives include Mac and Windows launchers. Docker/internet are prerequisites;
 Windows additionally needs WSL Ubuntu integration. Neither archive contains client
 SQL dumps, uploads, runtime .env files, publisher tools or the private signing key.
-An installer takes the data inputs separately; a patch preserves installed data.
+Clean installers enable protected browser onboarding without a dump. Restore mode
+takes data inputs separately; a patch preserves installed data.
 Public key verification stays in the backend. Generate activation codes on the
 publisher computer using tools/issue-license.php and the protected external key.

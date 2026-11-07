@@ -101,7 +101,7 @@ return new class extends Migration
 
             $table->index(['customer_id', 'completed_at']);
             $table->index(['service_id', 'completed_at']);
-            $table->index(['assigned_personnel_id', 'completed_at']);
+            $table->index(['assigned_personnel_id', 'completed_at'], 'completion_events_personnel_completed_index');
         });
     }
 

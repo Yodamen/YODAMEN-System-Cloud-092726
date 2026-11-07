@@ -38,3 +38,7 @@ The old pre-licensing migration chain has an overlong MySQL index name when run
 from an empty database. The existing installer uses an imported schema. This
 rehearsal used that schema plus its migration history to test the supported update
 path; it did not modify that unrelated old migration.
+
+Subsequent clean-install work shortened the legacy MySQL index and foreign-key
+names that prevented migration from an empty database. See the current installer
+verification report for the successful full-MySQL migration rehearsal.

@@ -14,14 +14,18 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [branding, setBranding] = useState(null)
+  const [setupRequired, setSetupRequired] = useState(false)
 
   useEffect(() => {
+    api.get('/v1/setup').then(({ data }) => setSetupRequired(data.requires_setup === true)).catch(() => {})
     api.get('/v1/public/branding').then((response) => setBranding(response.data.branding || null)).catch(() => {})
   }, [])
 
   if (user) {
     return <Navigate to="/" replace />
   }
+
+  if (setupRequired) return <Navigate to="/setup" replace />
 
   async function handleSubmit(event) {
     event.preventDefault()

@@ -2,6 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 
+// Web middleware always applies session and CSRF protection to first-time setup.
+Route::get('/api/v1/setup', [\App\Http\Controllers\Api\V1\SetupController::class, 'show'])->middleware('throttle:60,1,setup-read:');
+Route::post('/api/v1/setup', [\App\Http\Controllers\Api\V1\SetupController::class, 'store'])->middleware('throttle:10,1,setup-write:');
+
 $serveYodamenSpa = function () {
     $index = public_path('index.html');
 
