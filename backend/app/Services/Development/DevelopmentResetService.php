@@ -19,6 +19,9 @@ class DevelopmentResetService
      * @var list<string>
      */
     public const RESET_TABLES = [
+        'ap_control_numbers',
+        'supporting_documents',
+        'reversal_approval_requests',
         'expense_lines',
         'expense_reversal_requests',
         'expenses',
@@ -36,6 +39,8 @@ class DevelopmentResetService
         'accounting_opening_balances',
         'accounting_journal_lines',
         'accounting_journal_entries',
+        'payroll_recovery_allocations',
+        'payroll_recoveries',
         'payroll_cash_advance_allocations',
         'payroll_cash_advance_waivers',
         'payroll_payment_splits',
@@ -60,6 +65,8 @@ class DevelopmentResetService
         'inventory_receipt_action_refunds',
         'inventory_receipt_action_lines',
         'inventory_receipt_action_requests',
+        'purchase_order_lines',
+        'purchase_orders',
         'inventory_receipt_lines',
         'inventory_receipts',
         'inventory_adjustment_requests',
@@ -156,6 +163,7 @@ class DevelopmentResetService
         'leave_types',
         'commission_rules',
         'discount_rules',
+        'incentive_rules',
         'customer_type_criteria',
         'customer_class_criteria',
         'retail_products',
@@ -186,6 +194,24 @@ class DevelopmentResetService
         'COMMISSION_RULE:',
         'DISCOUNT_RULE:',
     ];
+
+    /**
+     * New transaction tables must be explicitly reviewed before FULL reset.
+     * Do not silently delete an unknown table, and do not accidentally retain
+     * new downstream ledger records when the original transaction is reset.
+     */
+    private function assertWaterfallCoverage(): void
+    {
+        $required = [
+            'purchase_order_lines', 'purchase_orders',
+            'payroll_recovery_allocations', 'payroll_recoveries',
+            'reversal_approval_requests', 'supporting_documents',
+        ];
+        $missing = array_values(array_diff($required, self::RESET_TABLES));
+        if ($missing !== []) {
+            throw new RuntimeException('DEVRESET configuration missing transaction tables: '.implode(', ', $missing));
+        }
+    }
 
     /** @return array<string, int> */
     public function preview(): array
@@ -221,6 +247,7 @@ class DevelopmentResetService
      */
     public function execute(): array
     {
+        $this->assertWaterfallCoverage();
         $deleted = [];
 
         // DEVRESET intentionally clears the complete transactional graph while

@@ -41,6 +41,7 @@ import InventoryDashboardPage from '../pages/inventory/InventoryDashboardPage'
 import InventoryAdjustmentsPage from '../pages/inventory/InventoryAdjustmentsPage'
 import ReorderMonitoringPage from '../pages/inventory/ReorderMonitoringPage'
 import StockReceivedPage from '../pages/inventory/StockReceivedPage'
+import PurchasingPage from '../pages/inventory/PurchasingPage'
 import StockReturnsPage from '../pages/inventory/StockReturnsPage'
 import InventoryCountPage from '../pages/inventory/InventoryCountPage'
 import ServiceConsumptionPage from '../pages/inventory/ServiceConsumptionPage'
@@ -182,6 +183,10 @@ export const router = createBrowserRouter([
                 <SupplierMasterlistPage />
               </ModuleRoute>
             ),
+          },
+          {
+            path: '/inventory/purchasing',
+            element: <ModuleRoute module="purchasing"><PurchasingPage /></ModuleRoute>,
           },
           {
             path: '/inventory/stock-received',

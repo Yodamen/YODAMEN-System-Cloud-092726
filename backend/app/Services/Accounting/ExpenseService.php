@@ -145,6 +145,10 @@ class ExpenseService
                 'updated_by' => $actor->id,
             ]);
 
+            if ($expense->payment_status !== 'PAID') {
+                app(ApControlNumberService::class)->assign((int) $expense->business_id, 'EXPENSE', (int) $expense->id, $expense->expense_date->toDateString());
+            }
+
             return $this->fresh($expense);
         });
     }

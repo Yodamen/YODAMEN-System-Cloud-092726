@@ -10,6 +10,7 @@ import WorkflowReasonSelect from '../../components/common/WorkflowReasonSelect'
 import SupportingDocumentField from '../../components/common/SupportingDocumentField'
 import { uploadSupportingDocuments } from '../../utils/supportingDocuments'
 import '../expense/accounting-expense.css'
+import './general-ledger-layout.css'
 
 const localDateIso = (date = new Date()) => {
   const year = date.getFullYear()
@@ -49,7 +50,7 @@ export function GeneralLedgerPage() {
   const [error, setError] = useState('')
   const load = useCallback(async () => { try { const response = await api.get('/v1/accounting/general-ledger', { params: { ...filters, branch_id: filters.branch_id || undefined, account_id: filters.account_id || undefined } }); setData(response.data) } catch (e) { setError(getApiErrorMessage(e)) } }, [filters])
   useEffect(() => { load() }, [])
-  return <div className="page-stack accounting-page"><Heading title="General Ledger" subtitle="Posted, source-linked accounting entries with full debit and credit traceability." onRefresh={load} />{error ? <div className="form-alert error">{error}</div> : null}<div className="accounting-controls-row"><Filters {...{ filters, setFilters, options: data.options, onApply: load }} account /><BalanceSummary summary={data.summary} /></div><section className="content-card accounting-table-card"><div className="table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Journal</th><th>Account</th><th>Reference / Source</th><th>Memo</th><th>Debit</th><th>Credit</th></tr></thead><tbody>{data.rows.map((row, index) => <tr key={`${row.journal_code}-${index}`}><td>{dateLabel(row.posting_date)}</td><td><strong>{row.journal_code}</strong></td><td>{row.account_code} · {row.account_name}</td><td>{row.reference || '—'}<span className="table-subline">{row.source_type} · {row.source_event}</span></td><td>{row.memo || row.description || '—'}</td><td>{Number(row.debit) > 0 ? peso(row.debit) : '—'}</td><td>{Number(row.credit) > 0 ? peso(row.credit) : '—'}</td></tr>)}</tbody></table></div></section></div>
+  return <div className="page-stack accounting-page"><Heading title="General Ledger" subtitle="Posted, source-linked accounting entries with full debit and credit traceability." onRefresh={load} />{error ? <div className="form-alert error">{error}</div> : null}<div className="general-ledger-controls"><Filters {...{ filters, setFilters, options: data.options, onApply: load }} account /><BalanceSummary summary={data.summary} /></div><section className="content-card accounting-table-card"><div className="table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Journal</th><th>Account</th><th>Reference / Source</th><th>Memo</th><th>Debit</th><th>Credit</th></tr></thead><tbody>{data.rows.map((row, index) => <tr key={`${row.journal_code}-${index}`}><td>{dateLabel(row.posting_date)}</td><td><strong>{row.journal_code}</strong></td><td>{row.account_code} · {row.account_name}</td><td>{row.reference || '—'}<span className="table-subline">{row.source_type} · {row.source_event}</span></td><td>{row.memo || row.description || '—'}</td><td>{Number(row.debit) > 0 ? peso(row.debit) : '—'}</td><td>{Number(row.credit) > 0 ? peso(row.credit) : '—'}</td></tr>)}</tbody></table></div></section></div>
 }
 
 export function TrialBalancePage() {
@@ -163,6 +164,13 @@ export function CashManagementPage() {
         })}
         {!data.rows.length ? <div className="empty-state cash-balance-empty">No cash or bank balances available for the selected filters.</div> : null}
       </div>
+    </section>
+    <section className="content-card">
+      <div className="section-heading"><div><h2>Supplier Refunds Received</h2><p>Actual supplier refunds credited to bank or e-wallet accounts through Stock Returns. Approving a Stock Return only records a receivable; use Stock Return → Receive Refund to record the actual cash receipt.</p></div></div>
+      <div className="table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Stock Return</th><th>Supplier</th><th>Received In</th><th>Amount</th><th>Reference</th><th>Journal</th></tr></thead><tbody>
+        {(data.supplier_refund_receipts || []).map((refund) => <tr key={refund.id}><td>{dateLabel(refund.date)}</td><td><strong>{refund.return_code}</strong></td><td>{refund.supplier || '—'}</td><td>{refund.account || '—'}</td><td><strong>{peso(refund.amount)}</strong></td><td>{refund.reference || '—'}</td><td>{refund.journal_code || '—'}</td></tr>)}
+        {!(data.supplier_refund_receipts || []).length ? <tr><td colSpan="7"><div className="empty-state">No supplier refund cash receipts posted as of this date. Approved Stock Returns with a refund due remain receivables until Receive Refund is recorded.</div></td></tr> : null}
+      </tbody></table></div>
     </section>
     <section className="content-card"><div className="section-heading"><div><h2>Owner Funding History</h2><p>Capital contributions and owner loans are separate from sales and do not affect current-period revenue.</p></div></div><div className="table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Code</th><th>Type</th><th>Received In</th><th>Amount</th><th>Reference</th><th>Status</th><th>Action</th></tr></thead><tbody>{(funding.rows || []).map((row) => {
       const pending = row.pending_reversal

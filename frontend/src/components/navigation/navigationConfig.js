@@ -62,6 +62,7 @@ export const navigationSections = [
       { label: 'Inventory Dashboard', path: '/inventory/dashboard', module: 'inventory-dashboard', enabled: true },
       { label: 'Inventory Masterlist', path: '/inventory/products', module: 'inventory-master', enabled: true },
       { label: 'Supplier Masterlist', path: '/inventory/suppliers', module: 'supplier-master', enabled: true },
+      { label: 'Purchasing', path: '/inventory/purchasing', module: 'purchasing', enabled: true },
       { label: 'Stock Received', path: '/inventory/stock-received', module: 'stock-received', enabled: true },
       { label: 'Stock Returns', path: '/inventory/stock-returns', module: 'stock-returns', enabled: true },
       { label: 'Service Consumption', path: '/inventory/service-consumption', module: 'service-consumption', enabled: true },

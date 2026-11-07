@@ -35,5 +35,6 @@ class InventoryReceipt extends Model
     public function creator(): BelongsTo { return $this->belongsTo(User::class, 'created_by'); }
     public function lines(): HasMany { return $this->hasMany(InventoryReceiptLine::class); }
     public function actionRequests(): HasMany { return $this->hasMany(InventoryReceiptActionRequest::class); }
+    public function purchaseOrder(): BelongsTo { return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id'); }
     public function stockReturns(): HasMany { return $this->hasMany(InventoryStockReturn::class); }
 }

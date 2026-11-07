@@ -50,7 +50,41 @@ class AccountingReportsController extends Controller
             if ($request->filled('branch_id')) $q->where('e.branch_id',$request->integer('branch_id'));
             return ['id'=>$a->id,'code'=>$a->code,'name'=>$a->name,'balance'=>(float)(clone $q)->sum('debit')-(float)(clone $q)->sum('credit')];
         });
-        return response()->json(['rows'=>$rows,'summary'=>['total'=>(float)$rows->sum('balance')],'options'=>$this->options($businessId)]);
+        // Only completed supplier refund receipts increase cash. Approved stock returns
+        // first establish a receivable, which is non-cash until actually received.
+        $refundRows = \App\Models\InventoryStockReturnRefund::query()
+            ->join('inventory_stock_returns as returns', 'returns.id', '=', 'inventory_stock_return_refunds.inventory_stock_return_id')
+            ->join('accounting_journal_entries as posted', function ($join) {
+                $join->on('posted.source_id', '=', 'inventory_stock_return_refunds.id')
+                    ->where('posted.source_type', '=', 'INVENTORY_STOCK_RETURN_REFUND')
+                    ->where('posted.source_event', '=', 'RECEIVE')
+                    ->where('posted.status', '=', 'POSTED');
+            })
+            ->leftJoin('suppliers as supplier', 'supplier.id', '=', 'returns.supplier_id')
+            ->leftJoin('chart_of_accounts as account', 'account.id', '=', 'inventory_stock_return_refunds.receiving_account_id')
+            ->where('returns.business_id', $businessId)
+            ->whereDate('posted.posting_date', '<=', $to)
+            ->when($request->filled('branch_id'), fn($q) => $q->where('returns.branch_id', $request->integer('branch_id')))
+            ->orderByDesc('posted.posting_date')->orderByDesc('inventory_stock_return_refunds.id')
+            ->limit(100)
+            ->get([
+                'inventory_stock_return_refunds.id', 'inventory_stock_return_refunds.amount',
+                'inventory_stock_return_refunds.reference', 'inventory_stock_return_refunds.refund_date',
+                'returns.code as return_code', 'supplier.company_name as supplier_name',
+                'account.code as account_code', 'account.name as account_name',
+                'posted.code as journal_code', 'posted.posting_date',
+            ])->map(fn($refund) => [
+                'id' => $refund->id, 'date' => substr((string) $refund->posting_date, 0, 10),
+                'return_code' => $refund->return_code, 'supplier' => $refund->supplier_name,
+                'amount' => (float) $refund->amount, 'reference' => $refund->reference,
+                'account' => trim(($refund->account_code ?: '').' · '.($refund->account_name ?: ''), ' ·'),
+                'journal_code' => $refund->journal_code,
+            ])->values();
+        return response()->json([
+            'rows'=>$rows, 'summary'=>['total'=>(float)$rows->sum('balance')],
+            'supplier_refund_receipts'=>$refundRows,
+            'options'=>$this->options($businessId),
+        ]);
     }
 
     public function cashFlow(Request $request): JsonResponse

@@ -1,3 +1,6 @@
+import Modal from '../../components/common/Modal'
+import CustomerRegistrationForm, { emptyCustomerForm } from '../../components/common/CustomerRegistrationForm'
+import { useAuth } from '../../context/AuthContext'
 import SearchableSelect from '../../components/common/SearchableSelect'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -19,6 +22,10 @@ const emptyPackage = () => ({ customer_id: '', service_id: '', remaining_session
 
 export default function OpeningBalancesPage() {
   const [searchParams] = useSearchParams()
+  const { hasPermission, user } = useAuth()
+  const [newCustomer, setNewCustomer] = useState(null)
+  const [customerBusy, setCustomerBusy] = useState(false)
+  const [customerReferences, setCustomerReferences] = useState({ genders: [], lead_sources: [] })
   const [data, setData] = useState({ branches: [], cash_accounts: [], products: [], customers: [], package_services: [], readiness: {} })
   const [branchId, setBranchId] = useState('')
   const [cutoverDate, setCutoverDate] = useState(localDateIso())
@@ -53,6 +60,44 @@ export default function OpeningBalancesPage() {
 
   useEffect(() => { load(searchParams.get('branch_id') || '') }, [])
 
+  // Refresh customer choices without clearing unsaved opening-balance rows.
+  const refreshCustomers = async () => {
+    const response = await api.get('/v1/admin/opening-balances', { params: { branch_id: branchId } })
+    setData((previous) => ({ ...previous, customers: response.data.customers || [], readiness: response.data.readiness || previous.readiness }))
+  }
+
+  const createCustomer = async (event) => {
+    event.preventDefault()
+    setCustomerBusy(true)
+    setError('')
+    try {
+      const response = await api.post('/v1/operations/customers', {
+        ...newCustomer,
+        first_name: newCustomer.first_name.trim(),
+        last_name: newCustomer.last_name.trim(),
+        mobile_number: newCustomer.mobile_number.trim() || null,
+      })
+      await refreshCustomers()
+      setSuccess(`Customer ${response.data.customer?.full_name || 'record'} created. You may now assign opening service balances.`)
+      setNewCustomer(null)
+    } catch (e) {
+      setError(getApiErrorMessage(e))
+    } finally {
+      setCustomerBusy(false)
+    }
+  }
+
+  const openCustomerCreation = async () => {
+    setError('')
+    try {
+      const response = await api.get('/v1/operations/customers')
+      setCustomerReferences(response.data.references || { genders: [], lead_sources: [] })
+      setNewCustomer({ ...emptyCustomerForm(), registration_date: localDateIso() })
+    } catch (e) {
+      setError(getApiErrorMessage(e, 'Unable to load customer registration options.'))
+    }
+  }
+
   const cashTotal = useMemo(() => (data.cash_accounts || []).reduce((sum, row) => sum + Number(cash[row.id] || 0), 0), [cash, data.cash_accounts])
   const inventoryTotal = useMemo(() => (data.products || []).reduce((sum, row) => {
     const entry = inventory[row.id] || {}
@@ -68,6 +113,9 @@ export default function OpeningBalancesPage() {
 
   const existing = data.existing
   const blocked = existing || !data.readiness?.can_post
+  const customerCreation = !existing && hasPermission('customers', 'CREATE') ? (
+    <button type="button" className="secondary-button mini" onClick={openCustomerCreation}>+ New Customer</button>
+  ) : null
 
   function patchReceivable(index, field, value) {
     setReceivables((current) => current.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row))
@@ -140,6 +188,9 @@ export default function OpeningBalancesPage() {
       </div>
     </div>
 
+    {newCustomer ? <Modal title="Add Customer" subtitle="Register the customer before assigning opening service balances." onClose={() => !customerBusy && setNewCustomer(null)} wide>
+      <CustomerRegistrationForm form={newCustomer} onChange={setNewCustomer} onSubmit={createCustomer} onCancel={() => !customerBusy && setNewCustomer(null)} saving={customerBusy} references={customerReferences} canSetTestCustomer={Boolean(user?.role?.is_super_admin)} />
+    </Modal> : null}
     {error ? <div className="form-alert error">{error}</div> : null}
     {success ? <div className="form-alert success">{success}</div> : null}
 
@@ -180,7 +231,7 @@ export default function OpeningBalancesPage() {
     {tab === 'RECEIVABLES' ? <section className="content-card opening-entry-section">
       <div className="section-heading">
         <div><h2>Customer Balances</h2><p>Enter only amounts still collectible at cutover. Use Active Packages for balances tied to an existing package.</p></div>
-        <div className="opening-section-actions"><strong>{peso(standaloneReceivableTotal)}</strong><button type="button" className="secondary-button mini" disabled={blocked} onClick={() => setReceivables((current) => [...current, emptyReceivable()])}>+ Add Balance</button></div>
+        <div className="opening-section-actions"><strong>{peso(standaloneReceivableTotal)}</strong>{customerCreation}<button type="button" className="secondary-button mini" disabled={blocked} onClick={() => setReceivables((current) => [...current, emptyReceivable()])}>+ Add Balance</button></div>
       </div>
       {receivables.length ? <div className="opening-entry-list">{receivables.map((row, index) => <div className="opening-entry-card opening-receivable-card" key={`receivable-${index}`}>
         <label className="form-field opening-customer-field"><span>Customer</span><SearchableSelect disabled={blocked} value={row.customer_id} onChange={(e) => patchReceivable(index, 'customer_id', e.target.value)}><option value="">Select customer</option>{(data.customers || []).map((customer) => <option key={customer.id} value={customer.id}>{customer.name}{customer.code ? ` · ${customer.code}` : ''}</option>)}</SearchableSelect></label>
@@ -194,7 +245,7 @@ export default function OpeningBalancesPage() {
     {tab === 'PACKAGES' ? <section className="content-card opening-entry-section">
       <div className="section-heading">
         <div><h2>Active Packages / Service Credits</h2><p>Enter only what remains usable at cutover. Historical bookings, used sessions, and old payments do not need to be recreated.</p></div>
-        <div className="opening-section-actions"><strong>{peso(deferredPackageTotal)}</strong><button type="button" className="secondary-button mini" disabled={blocked} onClick={() => setPackages((current) => [...current, emptyPackage()])}>+ Add Package</button></div>
+        <div className="opening-section-actions"><strong>{peso(deferredPackageTotal)}</strong>{customerCreation}<button type="button" className="secondary-button mini" disabled={blocked} onClick={() => setPackages((current) => [...current, emptyPackage()])}>+ Add Package</button></div>
       </div>
       {packages.length ? <div className="opening-entry-list">{packages.map((row, index) => {
         const service = (data.package_services || []).find((item) => String(item.id) === String(row.service_id))

@@ -77,7 +77,7 @@ class AccountsPayableController extends Controller
                             ->orWhereHas('supplier', fn ($sq) => $sq->where('company_name', 'like', '%'.$search.'%')->orWhere('code_name', 'like', '%'.$search.'%'));
                     });
                 })
-                ->with(['branch:id,name','supplier:id,company_name,code_name'])
+                ->with(['branch:id,name','supplier:id,company_name,code_name','lines.product'])
                 ->get();
 
             foreach ($receipts as $receipt) {
@@ -102,10 +102,24 @@ class AccountsPayableController extends Controller
                     $outstanding,
                     $receipt->reference_no,
                     $asOf,
+                    $receipt->lines->map(fn ($line) => [
+                        'name' => $line->product?->name ?: 'Unnamed item',
+                        'sku' => $line->product?->sku,
+                        'purchase_quantity' => (float) ($line->purchase_quantity ?? $line->quantity_received),
+                        'purchase_uom' => $line->purchase_uom ?: $line->product?->unit,
+                    ])->values()->all(),
                 ));
             }
         }
 
+        // AP references remain stable after settlement and independently identify the payable.
+        $numberMap = DB::table('ap_control_numbers')->where('business_id', $businessId)
+            ->get(['source_type', 'source_id', 'code'])
+            ->keyBy(fn ($number) => $number->source_type.':'.$number->source_id);
+        $rows = $rows->map(function (array $row) use ($numberMap) {
+            $row['ap_control_no'] = $numberMap->get($row['source_type'].':'.$row['source_id'])?->code;
+            return $row;
+        });
         $rows = $rows->sortBy([['document_date', 'desc'], ['source_id', 'desc'], ['code', 'desc']])->values();
         $operationalTotal = round((float) $rows->sum('outstanding_amount'), 2);
         $ledgerBalance = $this->ledgerBalance($businessId, $asOf, $branchId);
@@ -180,6 +194,7 @@ class AccountsPayableController extends Controller
         float $outstandingAmount,
         ?string $reference,
         string $asOf,
+        array $items = [],
     ): array {
         $documentDate = $date ?: $asOf;
         $age = max(0, CarbonImmutable::parse($documentDate)->startOfDay()->diffInDays(CarbonImmutable::parse($asOf)->startOfDay(), false));
@@ -193,6 +208,7 @@ class AccountsPayableController extends Controller
             'payee' => $payee,
             'branch' => $branch,
             'reference' => $reference,
+            'items' => $items,
             'original_amount' => round($originalAmount, 2),
             'outstanding_amount' => round($outstandingAmount, 2),
             'age_days' => $age,

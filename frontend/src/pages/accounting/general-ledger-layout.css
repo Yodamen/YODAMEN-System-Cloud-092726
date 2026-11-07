@@ -1,0 +1,9 @@
+/* Scoped to General Ledger; leave the compact controls in other accounting pages unchanged. */
+.general-ledger-controls { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.general-ledger-controls > .content-card { margin: 0; min-width: 0; }
+.general-ledger-controls .accounting-filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; align-items: end; gap: 12px; }
+.general-ledger-controls .accounting-filter-grid .form-field { min-width: 0; }
+.general-ledger-controls .accounting-filter-actions { min-width: max-content; padding-bottom: 1px; }
+.general-ledger-controls .accounting-filter-actions .secondary-button { white-space: nowrap; }
+@media (max-width: 1000px) { .general-ledger-controls .accounting-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 580px) { .general-ledger-controls .accounting-filter-grid { grid-template-columns: minmax(0, 1fr); } }
