@@ -26,7 +26,7 @@ return new class extends Migration
             Schema::create('accounting_payment_method_mappings', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('business_id')->constrained()->cascadeOnUpdate()->restrictOnDelete();
-                $table->foreignId('payment_method_reference_id')->constrained('reference_values')->cascadeOnUpdate()->cascadeOnDelete();
+                $table->foreignId('payment_method_reference_id')->constrained('reference_values', indexName: 'accounting_payment_mapping_method_fk')->cascadeOnUpdate()->cascadeOnDelete();
                 $table->foreignId('cash_account_id')->constrained('chart_of_accounts')->cascadeOnUpdate()->restrictOnDelete();
                 $table->timestamps();
                 $table->unique(['business_id', 'payment_method_reference_id'], 'acct_payment_mapping_uq');

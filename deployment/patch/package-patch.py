@@ -13,6 +13,7 @@ import tarfile
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output', required=True, type=Path)
 parser.add_argument('--version', required=True)
+parser.add_argument('--include-untracked', action='store_true', help='Include new untracked app source for an explicit test build')
 args = parser.parse_args()
 if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,100}', args.version):
     parser.error('Use a unique Docker-safe release version, maximum 101 characters.')
@@ -20,6 +21,13 @@ script = Path(__file__).resolve().parent
 repo = script.parent.parent
 commit = subprocess.check_output(['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip()
 tracked = subprocess.check_output(['git', '-C', str(repo), 'ls-files', '-z', '--', 'backend', 'frontend']).decode().split('\0')
+untracked = subprocess.check_output(['git', '-C', str(repo), 'ls-files', '--others', '--exclude-standard', '-z', '--', 'backend', 'frontend']).decode().split('\0')
+untracked = list(filter(None, untracked))
+if untracked and not args.include_untracked:
+    parser.error('New app source is untracked. Commit/stage it first, or use --include-untracked for a recorded test build.')
+if args.include_untracked:
+    tracked = sorted(set(tracked + untracked))
+
 args.output.mkdir(parents=True, exist_ok=True)
 stage = args.output / ('yodamen-patch-' + args.version)
 archive = args.output / (stage.name + '.tar.gz')
@@ -59,6 +67,7 @@ for name in ['Dockerfile', 'apache.conf', 'start.sh', 'compose.patch.yaml', 'upd
 dirty = bool(subprocess.check_output(['git', '-C', str(repo), 'status', '--porcelain', '--', 'backend', 'frontend']).strip())
 (stage / 'release.json').write_text(json.dumps({
     'version': args.version, 'base_commit': commit, 'includes_uncommitted_app_changes': dirty,
+    'includes_untracked_app_files': bool(untracked and args.include_untracked),
     'source_sha256': source_hash.hexdigest(), 'source_files': count,
     'built_at_utc': datetime.datetime.now(datetime.timezone.utc).isoformat(),
     'policy': {'paid_plans': 'permanent', 'premium_trial_activities': 50},

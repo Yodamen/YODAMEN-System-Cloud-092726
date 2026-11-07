@@ -5,6 +5,7 @@ import SuperAdminRoute from '../features/auth/SuperAdminRoute'
 import AppLayout from '../layouts/AppLayout'
 import DashboardPage from '../pages/DashboardPage'
 import LoginPage from '../pages/LoginPage'
+import SetupPage from '../pages/SetupPage'
 import BusinessSetupPage from '../pages/admin/BusinessSetupPage'
 import BrandingPage from '../pages/admin/BrandingPage'
 import ReferenceListsPage from '../pages/admin/ReferenceListsPage'
@@ -53,6 +54,8 @@ import { AccountsReceivablePage, AccountsPayablePage, CollectionsPage, BankRecon
 import CashHandlingPage from '../pages/sales/CashHandlingPage'
 
 export const router = createBrowserRouter([
+  { path: '/setup', element: <SetupPage /> },
+  { path: '/onboarding', element: <Navigate to="/setup" replace /> },
   {
     path: '/login',
     element: <LoginPage />,

@@ -2,6 +2,10 @@
 # Requires WSL Ubuntu and Docker Desktop's Ubuntu integration.
 [CmdletBinding()]
 param(
+    [switch]$CliSetup,
+    [switch]$Clean,
+    [switch]$Restore,
+    [string]$SetupFile,
     [string]$DumpFolder,
     [string]$UploadsFolder,
     [string]$KeyFile,
@@ -43,19 +47,38 @@ try {
     }
 
     $fresh = -not (Test-Path -LiteralPath (Join-Path $PSScriptRoot '.env'))
+    if ($Clean -and $Restore) { throw 'Choose Clean or Restore, not both.' }
+    $mode = ''
+    $modeFile = Join-Path $PSScriptRoot '.install-state/mode'
+    if (Test-Path -LiteralPath $modeFile) { $mode = (Get-Content -LiteralPath $modeFile -Raw).Trim() }
+    if ($Clean) { if ($mode -eq 'restore') { throw 'This installation is already in restore mode.' }; $mode = 'clean' }
+    if ($Restore) { if ($mode -eq 'clean') { throw 'This installation is already in clean mode.' }; $mode = 'restore' }
+    if (-not $mode) {
+        if ($DumpFolder -or -not $fresh) { $mode = 'restore' }
+        else {
+            $choice = Read-Host 'New client without data, or restore a dump? Enter clean or restore (default clean)'
+            $mode = if ([string]::IsNullOrWhiteSpace($choice)) { 'clean' } else { $choice.Trim().ToLowerInvariant() }
+        }
+    }
+    if ($mode -notin @('clean', 'restore')) { throw 'Mode must be clean or restore.' }
+
     $needsData = -not (Test-Path -LiteralPath (Join-Path $PSScriptRoot '.install-state/import-complete')) -and -not (Test-Path -LiteralPath (Join-Path $PSScriptRoot '.install-state/ready'))
-    if ($needsData -and [string]::IsNullOrWhiteSpace($DumpFolder)) {
+    if ($mode -eq 'restore' -and $needsData -and [string]::IsNullOrWhiteSpace($DumpFolder)) {
         $DumpFolder = Read-Host 'Full Windows path to your SQL dump folder (for example C:\Yodamen-Data\Dump20261101)'
     }
-    if ($needsData -and [string]::IsNullOrWhiteSpace($UploadsFolder)) {
+    if ($mode -eq 'restore' -and $needsData -and [string]::IsNullOrWhiteSpace($UploadsFolder)) {
         $UploadsFolder = Read-Host 'Full path to original storage\app folder, or press Enter to skip missing uploads'
     }
-    if ($fresh -and [string]::IsNullOrWhiteSpace($KeyFile)) {
+    if ($mode -eq 'restore' -and $fresh -and [string]::IsNullOrWhiteSpace($KeyFile)) {
         $KeyFile = Read-Host 'Full path to original backend .env to preserve its key, or Enter to generate a new key'
     }
 
     $script = Convert-ToWslPath (Join-Path $PSScriptRoot 'install.sh')
-    $installArguments = @($script)
+    $installArguments = @($script, "--$mode")
+    if ($CliSetup) { $installArguments += '--cli-setup' }
+    if (-not [string]::IsNullOrWhiteSpace($SetupFile)) {
+        $installArguments += @('--setup-file', (Convert-ToWslPath $SetupFile))
+    }
     if (-not [string]::IsNullOrWhiteSpace($DumpFolder)) {
         $installArguments += @('--dump', (Convert-ToWslPath $DumpFolder))
     }

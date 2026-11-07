@@ -5,7 +5,9 @@ try {
     $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
     if (! extension_loaded('sodium')) throw new RuntimeException('PHP Sodium is missing.');
     if (! Illuminate\Support\Facades\Schema::hasTable('migrations')) throw new RuntimeException('Dump has no migration history. Supply the complete database dump.');
-    if (! App\Models\User::whereHas('role', fn ($q) => $q->where('is_super_admin', true))->exists()) {
+    $pendingSetup = in_array('--allow-pending-setup', $argv, true)
+        && app(App\Services\Foundation\BrowserSetupService::class)->status()['available'];
+    if (! $pendingSetup && ! App\Models\User::whereHas('role', fn ($q) => $q->where('is_super_admin', true))->exists()) {
         throw new RuntimeException('No Super Admin was imported. Verify that the complete dump was supplied.');
     }
     if (in_array('--before-migrations', $argv, true)) { echo "Imported schema and Super Admin verified.\n"; exit(0); }

@@ -1,0 +1,25 @@
+.setup-page { min-height: 100dvh; padding: 40px 18px; display: grid; place-items: center; background: #080808; color: #eee; }
+.setup-card { width: min(100%, 620px); padding: clamp(24px, 5vw, 44px); background: #121212; border: 1px solid #2c2c2c; border-radius: 18px; box-shadow: 0 24px 80px #0006; }
+.setup-logo { display: block; width: 300px; max-width: 100%; height: auto; margin: 0 auto 28px; }
+.setup-card h1 { color: #fafafa; font-size: clamp(1.6rem, 4vw, 2rem); margin: 6px 0 12px; line-height: 1.2; }
+.setup-card p { line-height: 1.6; color: #bdbdbd; }
+.setup-card .setup-eyebrow { margin: 0; color: #d3b25d; font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.setup-intro { margin-bottom: 24px; }
+.setup-steps { padding: 0 0 22px; margin: 0 0 24px; list-style: none; display: flex; gap: 20px; border-bottom: 1px solid #333; color: #929292; font-size: .8rem; }
+.setup-steps [aria-current] { color: #e0c77f; font-weight: 700; }
+.setup-card fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 18px; }
+.setup-card .form-field { margin: 0; color: #eee; font-size: .88rem; }
+.setup-card input { width: 100%; min-height: 44px; background: #fafafa; color: #161616; border: 1px solid #ccc; border-radius: 7px; }
+.setup-card input:focus-visible { outline: 2px solid #d3b25d; outline-offset: 3px; }
+.setup-card small { color: #a4a4a4; line-height: 1.4; }
+.setup-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.setup-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; }
+.setup-primary { background: #c9a33f; border-color: #c9a33f; color: #111; min-height: 44px; text-align: center; text-decoration: none; display: inline-flex; justify-content: center; align-items: center; }
+.setup-back { color: #ddd; background: transparent; border: 1px solid #555; border-radius: 7px; padding: 9px 18px; }
+.setup-alert { color: #ffd0c6; background: #3b1e18; border: 1px solid #8b5146; border-radius: 8px; padding: 12px; margin-bottom: 20px; line-height: 1.5; }
+.setup-summary { margin: 24px 0; padding: 18px; background: #1b1b1b; border-radius: 10px; }
+.setup-summary dt { font-size: .75rem; color: #aaa; margin-top: 12px; }
+.setup-summary dt:first-child { margin-top: 0; }
+.setup-summary dd { margin: 4px 0 0; overflow-wrap: anywhere; font-family: ui-monospace, monospace; color: #eee; }
+.setup-card .setup-note { font-size: .82rem; margin: 0; }
+@media (max-width: 480px) { .setup-fields { grid-template-columns: 1fr; } .setup-steps { gap: 14px; font-size: .72rem; } .setup-actions { flex-wrap: wrap; } .setup-primary { flex: 1; } }

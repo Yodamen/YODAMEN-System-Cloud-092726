@@ -13,6 +13,7 @@ import tempfile
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--output', required=True, type=Path)
 parser.add_argument('--version', required=True)
+parser.add_argument('--include-untracked', action='store_true', help='Include new app source in a recorded test build')
 args = parser.parse_args()
 script = Path(__file__).resolve().parent
 patch = script.parent / 'patch'
@@ -23,7 +24,7 @@ if stage.exists() or archive.exists(): parser.error('This version exists. Choose
 with tempfile.TemporaryDirectory(prefix='yodamen-installer-build-') as tmp:
     # The patch builder validates the version and copies only filtered tracked
     # backend/frontend working files. Never clone the old deployed source snapshot.
-    subprocess.run([sys.executable, str(patch / 'package-patch.py'), '--output', tmp, '--version', args.version], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run([sys.executable, str(patch / 'package-patch.py'), '--output', tmp, '--version', args.version] + (['--include-untracked'] if args.include_untracked else []), check=True, stdout=subprocess.DEVNULL)
     snapshot = Path(tmp) / ('yodamen-patch-' + args.version)
     stage.mkdir(mode=0o700)
     shutil.copytree(snapshot / 'source', stage / 'source')

@@ -48,7 +48,7 @@ return new class extends Migration
         if (! Schema::hasTable('service_consumption_recipe_lines')) {
             Schema::create('service_consumption_recipe_lines', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('service_consumption_recipe_id')->constrained('service_consumption_recipes')->cascadeOnUpdate()->cascadeOnDelete();
+                $table->foreignId('service_consumption_recipe_id')->constrained('service_consumption_recipes', indexName: 'service_recipe_lines_recipe_fk')->cascadeOnUpdate()->cascadeOnDelete();
                 $table->foreignId('retail_product_id')->constrained('retail_products')->cascadeOnUpdate()->restrictOnDelete();
                 $table->decimal('quantity_per_service', 14, 4);
                 $table->string('basic_uom_snapshot', 40);
