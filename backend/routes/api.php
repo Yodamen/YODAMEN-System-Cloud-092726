@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\V1\Hr\MyPayrollController;
 use App\Http\Controllers\Api\V1\Hr\WorkScheduleController;
 use App\Http\Controllers\Api\V1\Inventory\RetailProductController;
 use App\Http\Controllers\Api\V1\Inventory\SupplierController;
+use App\Http\Controllers\Api\V1\Inventory\PurchaseOrderController;
 use App\Http\Controllers\Api\V1\Inventory\InventoryOperationsController;
 use App\Http\Controllers\Api\V1\Inventory\InventoryControlController;
 use App\Http\Controllers\Api\V1\Inventory\InventoryAdjustmentController;
@@ -187,6 +188,17 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:service-balances,VIEW');
         Route::get('/package-enrollments/{enrollment}/financials', [ServiceBalanceController::class, 'financials'])
             ->middleware('permission:service-balances,VIEW');
+
+        Route::prefix('purchasing')->group(function () {
+            Route::get('/orders', [PurchaseOrderController::class, 'index'])->middleware('permission:purchasing,VIEW');
+            Route::get('/orders/{id}', [PurchaseOrderController::class, 'show'])->middleware('permission:purchasing,VIEW');
+            Route::post('/orders', [PurchaseOrderController::class, 'store'])->middleware('permission:purchasing,CREATE');
+            Route::put('/orders/{id}', [PurchaseOrderController::class, 'update'])->middleware('permission:purchasing,EDIT');
+            Route::post('/orders/{id}/submit', [PurchaseOrderController::class, 'submit'])->middleware('permission:purchasing,SUBMIT');
+            Route::post('/orders/{id}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:purchasing,APPROVE');
+            Route::post('/orders/{id}/cancel', [PurchaseOrderController::class, 'cancel'])->middleware('permission:purchasing,CANCEL');
+            Route::post('/orders/{id}/receive', [PurchaseOrderController::class, 'receive'])->middleware(['permission:purchasing,RECEIVE','permission:stock-received,CREATE']);
+        });
 
         Route::prefix('inventory')->group(function () {
             Route::get('/dashboard', [InventoryOperationsController::class, 'dashboard'])

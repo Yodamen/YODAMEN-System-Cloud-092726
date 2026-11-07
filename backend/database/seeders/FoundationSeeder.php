@@ -99,7 +99,7 @@ class FoundationSeeder extends Seeder
                 'daily-compensation', 'commissions', 'payroll', 'payslips', 'ar', 'ap', 'collections',
                 'expenses', 'petty-cash', 'bank-reconciliation', 'cash-management', 'cash-deposits', 'daily-closing',
                 'cash-flow', 'financial-statements', 'inventory-dashboard', 'inventory-master', 'supplier-master',
-                'stock-received', 'stock-returns', 'inventory-movements', 'service-consumption', 'inventory-count',
+                'stock-received', 'stock-returns', 'purchasing', 'inventory-movements', 'service-consumption', 'inventory-count',
                 'inventory-adjustments', 'reorder', 'report-sales', 'report-customers',
                 'report-services', 'report-staff', 'report-hr', 'report-accounting', 'report-inventory',
             ],
@@ -137,6 +137,8 @@ class FoundationSeeder extends Seeder
             ->where(function ($query) {
                 $query->where(function ($q) {
                     $q->where('module', 'stock-received')->whereIn('action', ['VIEW', 'CREATE', 'REQUEST_CORRECTION', 'APPROVE_CORRECTION', 'REQUEST_REVERSAL', 'APPROVE_REVERSAL', 'RECEIVE_REFUND']);
+                })->orWhere(function ($q) {
+                    $q->where('module', 'purchasing')->whereIn('action', ['VIEW','CREATE','EDIT','SUBMIT','APPROVE','CANCEL','RECEIVE']);
                 })->orWhere(function ($q) {
                     $q->where('module', 'stock-returns')->whereIn('action', ['VIEW', 'CREATE', 'APPROVE', 'RECEIVE_REFUND']);
                 })->orWhere(function ($q) {
@@ -238,6 +240,7 @@ class FoundationSeeder extends Seeder
             'inventory-dashboard' => ['VIEW'],
             'inventory-master' => ['VIEW', 'CREATE', 'EDIT', 'APPROVE'],
             'supplier-master' => ['VIEW', 'CREATE', 'EDIT'],
+            'purchasing' => ['VIEW', 'CREATE', 'EDIT', 'SUBMIT', 'APPROVE', 'CANCEL', 'RECEIVE'],
             'stock-received' => ['VIEW', 'CREATE', 'REQUEST_CORRECTION', 'APPROVE_CORRECTION', 'REQUEST_REVERSAL', 'APPROVE_REVERSAL', 'RECEIVE_REFUND'],
             'stock-returns' => ['VIEW', 'CREATE', 'APPROVE', 'RECEIVE_REFUND'],
             'inventory-movements' => ['VIEW'],

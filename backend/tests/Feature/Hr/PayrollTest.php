@@ -289,6 +289,8 @@ test('only manager can waive one payroll cash advance deduction and the balance 
 });
 
 test('payroll can be paid from petty cash and automatically appears in the petty cash subledger', function () {
+    // The accounting journal uses the actual payment date; report the same September period.
+    $this->travelTo(\Carbon\CarbonImmutable::parse('2026-09-26 12:00:00', 'Asia/Manila'));
     createApprovedPayrollAttendance($this);
 
     $runId = $this->actingAs($this->admin)->postJson('/api/v1/hr/payroll', [

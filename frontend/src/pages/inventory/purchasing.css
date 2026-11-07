@@ -1,0 +1,38 @@
+/* Purchasing uses the same page-stack, content-card, data-table and modal primitives as Stock Received. */
+.purchasing-page { min-width: 0; }
+.purchase-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.purchase-filters .form-field { min-width: 220px; }
+.purchase-filters .filter-actions-inline { margin-left: auto; }
+.purchase-orders-table { min-width: 1120px; }
+.purchase-text-link { background: none; border: 0; padding: 0; color: inherit; font: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.purchase-form { display: grid; gap: 14px; }
+.purchase-form-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 12px; }
+.purchase-section-title { margin: 10px 0 2px; font-size: .95rem; }
+.purchase-entry-table { min-width: 930px; }
+.purchase-entry-table td:first-child { min-width: 235px; }
+.purchase-entry-table input, .purchase-receive-table input { width: 100%; min-width: 80px; }
+.purchase-total { display: flex; justify-content: flex-end; gap: 20px; padding: 12px 0; border-top: 1px solid var(--border); }
+.purchase-detail-summary { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 10px; margin-bottom: 16px; }
+.purchase-detail-summary > div { display: grid; gap: 5px; padding: 12px; border: 1px solid var(--border); border-radius: 9px; }
+.purchase-detail-summary span { color: var(--muted); font-size: .75rem; }
+.purchase-confirm-note { color: var(--muted); font-size: .85rem; margin: 12px 0; }
+@media (max-width: 700px) { .purchase-filters .form-field { min-width: 100%; } .purchase-filters .filter-actions-inline { margin-left: 0; } }
+
+/* PO layout refinements: item entry never requires a horizontal scrollbar. */
+.purchase-filters { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; }
+.purchase-filters .form-field { min-width: 0; }
+.purchase-filters .filter-actions-inline { margin-left: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.purchase-form, .purchase-item-editor { min-width: 0; max-width: 100%; }
+.purchase-item-editor { display: grid; gap: 12px; }
+.purchase-line-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; min-width: 0; }
+.purchase-line-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.purchase-line-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; }
+.purchase-line-fields .form-field, .purchase-form-fields .form-field { min-width: 0; }
+.purchase-line-fields input, .purchase-line-fields select { width: 100%; min-width: 0; }
+.purchase-product-field { grid-column: 1 / -1; }
+.purchase-line-total { display: grid; gap: 4px; align-self: end; padding: 8px 0; }
+.purchase-line-total span { color: var(--muted); font-size: .8rem; }
+.purchase-text-link { text-decoration: none; }
+.purchase-text-link:hover { text-decoration: none; }
+@media (max-width: 800px) { .purchase-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .purchase-filters, .purchase-line-fields, .purchase-form-fields { grid-template-columns: minmax(0, 1fr); } }

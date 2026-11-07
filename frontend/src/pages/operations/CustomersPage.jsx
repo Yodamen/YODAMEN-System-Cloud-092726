@@ -1,4 +1,5 @@
 import SearchableSelect from '../../components/common/SearchableSelect'
+import CustomerRegistrationForm from '../../components/common/CustomerRegistrationForm'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, getApiErrorMessage } from '../../api/client'
 import ActionMenu from '../../components/common/ActionMenu'
@@ -574,29 +575,7 @@ export default function CustomersPage() {
       {form && (
         <Modal title={form.id ? 'Edit Customer' : 'Add Customer'} onClose={() => setForm(null)} wide>
           {formError ? <div className="form-alert error">{formError}</div> : null}
-          <form className="form-grid" onSubmit={save}>
-            <label className="form-field">First Name<input value={form.first_name} onChange={(e) => setForm((v) => ({ ...v, first_name: e.target.value }))} required /></label>
-            <label className="form-field">Last Name<input value={form.last_name} onChange={(e) => setForm((v) => ({ ...v, last_name: e.target.value }))} required /></label>
-            <label className="form-field">Mobile Number<input value={form.mobile_number} onChange={(e) => setForm((v) => ({ ...v, mobile_number: e.target.value }))} /></label>
-            <label className="form-field">Email<input type="email" value={form.email} onChange={(e) => setForm((v) => ({ ...v, email: e.target.value }))} /></label>
-            <label className="form-field">Birthday<input type="date" value={form.birthday} onChange={(e) => setForm((v) => ({ ...v, birthday: e.target.value }))} /></label>
-            <label className="form-field">Gender<SearchableSelect value={form.gender_code} onChange={(e) => setForm((v) => ({ ...v, gender_code: e.target.value }))}><option value="">Select</option>{references.genders.map((row) => <option key={row.code} value={row.code}>{row.value}</option>)}</SearchableSelect></label>
-            <label className="form-field">Lead Source<SearchableSelect value={form.lead_source_code} onChange={(e) => setForm((v) => ({ ...v, lead_source_code: e.target.value }))}><option value="">Select</option>{references.lead_sources.map((row) => <option key={row.code} value={row.code}>{row.value}</option>)}</SearchableSelect></label>
-            <label className="form-field">Registration Date<input type="date" value={form.registration_date} onChange={(e) => setForm((v) => ({ ...v, registration_date: e.target.value }))} /></label>
-            <label className="form-field form-span-2">Address<textarea rows="2" value={form.address} onChange={(e) => setForm((v) => ({ ...v, address: e.target.value }))} /></label>
-            <label className="form-field form-span-2">Notes<textarea rows="3" value={form.notes} onChange={(e) => setForm((v) => ({ ...v, notes: e.target.value }))} /></label>
-            {!form.id && user?.role?.is_super_admin ? (
-              <label className="checkbox-field form-span-2">
-                <input type="checkbox" checked={Boolean(form.is_test_customer)} onChange={(e) => setForm((v) => ({ ...v, is_test_customer: e.target.checked }))} />
-                <span>
-                  <strong>Test Customer Only</strong>
-                  <small>Marks this customer and all linked transactions as eligible for the test-only DevReset.</small>
-                </span>
-              </label>
-            ) : null}
-            <div className="field-helper form-span-2">Duplicate control applies when a mobile number is provided, or when both name and birthday match an existing customer.</div>
-            <div className="modal-actions form-span-2"><button className="secondary-button" type="button" onClick={() => setForm(null)}>Cancel</button><button className="primary-button" type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save Customer'}</button></div>
-          </form>
+          <CustomerRegistrationForm form={form} onChange={setForm} onSubmit={save} onCancel={() => setForm(null)} saving={saving} references={references} canSetTestCustomer={Boolean(user?.role?.is_super_admin)} />
         </Modal>
       )}
     </div>

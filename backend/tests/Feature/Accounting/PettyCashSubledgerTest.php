@@ -99,6 +99,8 @@ test('liquidation reconciles book to actual cash without reposting expense journ
 });
 
 test('petty cash reversal requires approval and reversed replenishments are separated from active summary', function () {
+    // Reversal entries post on the approval date, so keep approval inside the September reporting window.
+    $this->travelTo(\Carbon\CarbonImmutable::parse('2026-09-26 12:00:00', 'Asia/Manila'));
     $created = $this->actingAs($this->user)->postJson('/api/v1/petty-cash', [
         'branch_id' => $this->user->default_branch_id,
         'transaction_date' => '2026-09-25',
@@ -145,6 +147,8 @@ test('petty cash reversal requires approval and reversed replenishments are sepa
 });
 
 test('reversed petty cash funded expenses are excluded from active disbursed summary', function () {
+    // The reversal must be posted before the requested report's September 30 cutoff.
+    $this->travelTo(\Carbon\CarbonImmutable::parse('2026-09-26 12:00:00', 'Asia/Manila'));
     $this->actingAs($this->user)->postJson('/api/v1/petty-cash', [
         'branch_id' => $this->user->default_branch_id,
         'transaction_date' => '2026-09-25',

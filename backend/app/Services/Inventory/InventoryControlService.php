@@ -100,7 +100,7 @@ class InventoryControlService
     {
         $query = InventoryReceipt::query()
             ->where('business_id', $actor->business_id)
-            ->with(['branch', 'supplier', 'creator', 'lines.product', 'actionRequests.requester', 'actionRequests.reviewer', 'actionRequests.lines.receiptLine.product', 'actionRequests.refunds.receivingAccount', 'actionRequests.refunds.creator'])
+            ->with(['branch', 'supplier', 'creator', 'purchaseOrder:id,code', 'lines.product', 'actionRequests.requester', 'actionRequests.reviewer', 'actionRequests.lines.receiptLine.product', 'actionRequests.refunds.receivingAccount', 'actionRequests.refunds.creator'])
             ->orderByDesc('received_date')
             ->orderByDesc('id');
 
@@ -302,6 +302,10 @@ class InventoryControlService
                 throw new DomainException('Unpaid stock receipts must post the full Grand Total to Accounts Payable.');
             }
             $receipt->update(['total_cost' => round($total, 2), 'original_total_cost' => round($total, 2)]);
+
+            if ($paymentStatus === 'UNPAID') {
+                app(\App\Services\Accounting\ApControlNumberService::class)->assign((int) $actor->business_id, 'INVENTORY_RECEIPT', (int) $receipt->id, $receivedDate);
+            }
 
             $this->audit->record(
                 action: 'RECEIVE_INVENTORY_STOCK', module: 'stock-received', entityType: InventoryReceipt::class,
@@ -731,7 +735,7 @@ class InventoryControlService
     public function serializeReceipt(InventoryReceipt $receipt): array
     {
         $receipt->loadMissing([
-            'branch', 'supplier', 'paymentMethod', 'creator', 'lines.product',
+            'branch', 'supplier', 'paymentMethod', 'creator', 'purchaseOrder:id,code', 'lines.product',
             'actionRequests.requester', 'actionRequests.reviewer', 'actionRequests.lines.receiptLine.product',
             'actionRequests.refunds.receivingAccount', 'actionRequests.refunds.creator',
         ]);
@@ -747,6 +751,8 @@ class InventoryControlService
             'supplier_name' => $receipt->supplier_name ?: $receipt->supplier?->company_name,
             'supplier_code_name' => $receipt->supplier?->code_name ?: $receipt->supplier_name,
             'reference_no' => $receipt->reference_no,
+            'purchase_order_id' => $receipt->purchase_order_id,
+            'purchase_order_code' => $receipt->purchaseOrder?->code,
             'notes' => $receipt->notes,
             'status' => $receipt->status,
             'original_total_cost' => (float) ($receipt->original_total_cost ?? $receipt->total_cost),

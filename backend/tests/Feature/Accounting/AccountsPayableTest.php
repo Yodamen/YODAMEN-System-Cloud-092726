@@ -66,6 +66,7 @@ test('accounts payable lists unpaid expenses and settles them through mapped pay
 
     $this->actingAs($this->user)->getJson('/api/v1/accounting/accounts-payable?as_of='.$this->today)
         ->assertOk()
+        ->assertJsonPath('rows.0.ap_control_no', 'AP-'.date('md', strtotime($this->today)).'-0001')
         ->assertJsonPath('rows.0.source_type', 'EXPENSE')
         ->assertJsonPath('rows.0.outstanding_amount', 3500)
         ->assertJsonPath('summary.total', 3500)

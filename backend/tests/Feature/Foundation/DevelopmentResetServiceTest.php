@@ -355,3 +355,24 @@ test('only super admin can mark a newly created customer as test data', function
 
     expect($customer->is_test_customer)->toBeTrue();
 });
+
+
+test('full DevReset includes new transactional waterfall tables while retaining master references', function () {
+    $transactionTables = [
+        'purchase_order_lines', 'purchase_orders',
+        'payroll_recovery_allocations', 'payroll_recoveries',
+        'reversal_approval_requests', 'supporting_documents',
+    ];
+    foreach ($transactionTables as $table) {
+        expect(\Illuminate\Support\Facades\Schema::hasTable($table))->toBeTrue();
+        expect(DevelopmentResetService::RESET_TABLES)->toContain($table);
+        expect(DevelopmentResetService::PRESERVED_TABLES)->not->toContain($table);
+    }
+    foreach (['incentive_rules', 'suppliers', 'retail_products', 'chart_of_accounts', 'reference_values'] as $table) {
+        expect(DevelopmentResetService::PRESERVED_TABLES)->toContain($table);
+        expect(DevelopmentResetService::RESET_TABLES)->not->toContain($table);
+    }
+    foreach (['purchase_orders', 'purchase_order_lines', 'payroll_recoveries'] as $table) {
+        expect(DevelopmentResetService::TEST_RESET_TABLES)->not->toContain($table);
+    }
+});

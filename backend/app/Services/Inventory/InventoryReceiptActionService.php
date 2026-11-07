@@ -182,6 +182,22 @@ class InventoryReceiptActionService
             throw new DomainException('This receipt line changed after the correction request was submitted. Reject it and create a fresh correction request.');
         }
 
+        if ($line->purchase_order_line_id) {
+            $poLine = \App\Models\PurchaseOrderLine::query()
+                ->whereKey($line->purchase_order_line_id)->firstOrFail();
+            $otherQuantity = 0.0;
+            foreach ($poLine->receiptLines()
+                ->where('id', '<>', $line->id)
+                ->whereHas('receipt', fn ($q) => $q->where('status', 'POSTED'))
+                ->get() as $otherLine) {
+                $otherQuantity += (float) $this->effectiveLineState($otherLine)['purchase_quantity'];
+            }
+            $newQuantity = (float) $lineRequest->corrected_purchase_quantity;
+            if ($otherQuantity + $newQuantity - (float) $poLine->purchase_quantity > 0.00005) {
+                throw new DomainException('Correction exceeds the approved Purchase Order quantity.');
+            }
+        }
+
         $qtyDelta = round((float) $lineRequest->quantity_delta, 4);
         $valueDelta = round((float) $lineRequest->value_delta, 2);
         $this->applyInventoryDelta($actor, $receipt, $line, $qtyDelta, $valueDelta, 'STOCK_RECEIPT_CORRECTION', $request->code, 'Approved correction for '.$receipt->code);
@@ -324,6 +340,25 @@ class InventoryReceiptActionService
             if (! $journal) throw new DomainException('Unable to post the stock receipt reversal journal.');
         }
         $receipt->update(['status'=>'REVERSED']);
+
+        // A fully undone Purchase Order must no longer be presented as approved.
+        // Partial receipt reversals leave the PO approved so remaining deliveries
+        // can still be received. Keep original receipt and reversal audit history.
+        if ($receipt->purchase_order_id) {
+            $purchaseOrder = \App\Models\PurchaseOrder::query()
+                ->whereKey($receipt->purchase_order_id)->lockForUpdate()->firstOrFail();
+            if ($purchaseOrder->status === 'APPROVED'
+                && ! $purchaseOrder->receipts()->where('status', 'POSTED')->exists()) {
+                $purchaseOrder->update(['status' => 'REVERSED']);
+                $this->audit->record(
+                    action:'REVERSE_PURCHASE_ORDER', module:'purchasing',
+                    entityType: \App\Models\PurchaseOrder::class,
+                    entityId:$purchaseOrder->id,
+                    before:['status'=>'APPROVED'], after:['status'=>'REVERSED'],
+                    reason:$request->reason, actor:$actor
+                );
+            }
+        }
     }
 
     private function netReceiptAccountingToReverse(InventoryReceipt $receipt): array

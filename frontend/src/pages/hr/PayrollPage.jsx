@@ -31,6 +31,9 @@ function statusClass(status) {
 export default function PayrollPage() {
   const { user, hasPermission } = useAuth()
   const [data, setData] = useState(null)
+  const [tipData, setTipData] = useState({ rows: [], options: {} })
+  const [tipPayout, setTipPayout] = useState(null)
+  const [tipConfirmation, setTipConfirmation] = useState(false)
   const [detail, setDetail] = useState(null)
   const [runForm, setRunForm] = useState(emptyRun)
   const [adjustmentForm, setAdjustmentForm] = useState(emptyAdjustment)
@@ -46,10 +49,38 @@ export default function PayrollPage() {
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const canViewTips = hasPermission('cash-deposits', 'VIEW')
+  const canReleaseTips = canViewTips && hasPermission('cash-deposits', 'CREATE')
   const load = useCallback(async () => {
     const response = await api.get('/v1/hr/payroll')
     setData(response.data)
-  }, [])
+    if (canViewTips) {
+      const tips = await api.get('/v1/accounting/staff-tips')
+      setTipData(tips.data)
+    }
+  }, [canViewTips])
+
+  function beginTipRelease(tip) {
+    setTipPayout({ ...tip, payout_account_id: '', payout_date: localDateKey(), payout_reference: '' })
+    setTipConfirmation(false)
+  }
+
+  async function releaseTip() {
+    if (!tipPayout) return
+    setBusy(true); setMessage('')
+    try {
+      await api.post(`/v1/accounting/staff-tips/${tipPayout.id}/payout`, {
+        payout_account_id: Number(tipPayout.payout_account_id),
+        payout_date: tipPayout.payout_date,
+        payout_reference: tipPayout.payout_reference || null,
+      })
+      setTipPayout(null); setTipConfirmation(false)
+      await load()
+    } catch (error) {
+      setTipConfirmation(false)
+      setMessage(getApiErrorMessage(error, 'Unable to release staff tip.'))
+    } finally { setBusy(false) }
+  }
 
   useEffect(() => {
     load().catch((error) => setMessage(getApiErrorMessage(error, 'Unable to load Payroll.')))
@@ -321,6 +352,14 @@ export default function PayrollPage() {
         {!(data?.runs || []).length ? <div className="empty-state">No payroll runs yet.</div> : null}
       </section>
 
+      {canViewTips ? <section className="content-card">
+        <div className="section-heading"><div><h2>Tips Release</h2><p>Review electronic tips alongside payroll drafts. Tips are liabilities paid separately and are excluded from Gross Pay, Net Pay, payroll deductions and commissions. Releasing a tip posts its own accounting journal.</p></div></div>
+        <div className="table-wrap"><table className="data-table"><thead><tr><th>Tip</th><th>Received</th><th>Personnel</th><th>Amount</th><th>Status</th><th>Paid From</th><th className="actions-column">Action</th></tr></thead><tbody>
+          {(tipData.rows || []).map((tip) => <tr key={tip.id}><td><strong>{tip.code}</strong></td><td>{tip.created_at ? formatDisplayDate(tip.created_at) : '—'}</td><td>{tip.personnel?.name || '—'}</td><td><strong>{formatPeso(tip.amount)}</strong></td><td><span className={`status-pill ${tip.status === 'PAID' ? 'success' : 'warning'}`}>{tip.status}</span></td><td>{tip.payout_account?.name || '—'}</td><td className="action-cell"><ActionMenu items={tip.status === 'PENDING' && canReleaseTips ? [{ label: 'Release Tip', onClick: () => beginTipRelease(tip) }] : []} /></td></tr>)}
+          {!(tipData.rows || []).length ? <tr><td colSpan="7"><div className="empty-state">No electronic tips recorded.</div></td></tr> : null}
+        </tbody></table></div>
+      </section> : null}
+
       <section className="content-card">
         <div className="section-heading"><div><h2>Open Payroll Adjustments</h2><p>Allowances, bonuses, deductions, and corrections that will be picked up by the matching Payroll Draft.</p></div></div>
         <div className="table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Personnel</th><th>Type</th><th>Description</th><th>Amount</th><th>Status</th><th className="actions-column">Action</th></tr></thead><tbody>{(data?.adjustments || []).map((row) => {
@@ -339,7 +378,7 @@ export default function PayrollPage() {
         {!(data?.recoveries || []).length ? <div className="empty-state">No outstanding payroll recoveries.</div> : null}
       </section>
 
-      {showRun ? <Modal title="Create Payroll Draft" subtitle="Sources remain editable only while the run is Draft." onClose={() => setShowRun(false)}><form className="form-grid payroll-run-form" onSubmit={createRun}>
+      {showRun ? <Modal title="Create Payroll Draft" subtitle="Sources remain editable only while the run is Draft. Electronic staff tips are reviewed separately below Payroll Runs and released independently of Net Pay." onClose={() => setShowRun(false)}><form className="form-grid payroll-run-form" onSubmit={createRun}>
         <label className="form-field"><span>Period Start</span><input type="date" required max={today} value={runForm.period_start} onChange={(e) => setRunForm((c) => ({ ...c, period_start: e.target.value }))} /></label>
         <label className="form-field"><span>Period End</span><input type="date" required min={runForm.period_start || undefined} max={today} value={runForm.period_end} onChange={(e) => setRunForm((c) => ({ ...c, period_end: e.target.value }))} /></label>
         <label className="form-field"><span>Pay Date</span><input type="date" required value={runForm.pay_date} onChange={(e) => setRunForm((c) => ({ ...c, pay_date: e.target.value }))} /></label>
@@ -379,6 +418,16 @@ export default function PayrollPage() {
           {detail.status === 'APPROVED' ? <div className="modal-actions payroll-run-detail-actions"><button className="primary-button" type="button" disabled={busy} onClick={() => requestRunAction('mark-paid')}>Mark Paid</button></div> : null}
         </div>
       </Modal> : null}
+
+      {tipPayout && !tipConfirmation ? <Modal title={`Release Tip · ${tipPayout.code}`} subtitle={`${tipPayout.personnel?.name || 'Staff'} · ${formatPeso(tipPayout.amount)}. This is independent of Payroll Net Pay.`} onClose={() => setTipPayout(null)}>
+        <form className="page-stack" onSubmit={(event) => { event.preventDefault(); setTipConfirmation(true) }}>
+          <label className="form-field"><span>Disbursement Funding Source</span><SearchableSelect required value={tipPayout.payout_account_id} onChange={(event) => setTipPayout((current) => ({ ...current, payout_account_id: event.target.value }))}><option value="">Select source</option>{(tipData.options?.payout_accounts || []).map((account) => <option key={account.id} value={account.id}>{account.code} · {account.name}</option>)}</SearchableSelect></label>
+          <label className="form-field"><span>Payment Date</span><input required type="date" max={localDateKey()} value={tipPayout.payout_date} onChange={(event) => setTipPayout((current) => ({ ...current, payout_date: event.target.value }))} /></label>
+          <label className="form-field"><span>Reference</span><input value={tipPayout.payout_reference} onChange={(event) => setTipPayout((current) => ({ ...current, payout_reference: event.target.value }))} placeholder="Bank or e-wallet transfer reference" /></label>
+          <div className="modal-actions"><button className="secondary-button" type="button" onClick={() => setTipPayout(null)}>Cancel</button><button className="primary-button" disabled={busy || !tipPayout.payout_account_id}>Review Tip Release</button></div>
+        </form>
+      </Modal> : null}
+      {tipPayout && tipConfirmation ? <ActionConfirmationModal title="Confirm Staff Tip Release" message="Release this tip as a separate cash disbursement? This will clear Staff Tips Payable and will not change the payroll run." details={[{ label: 'Personnel', value: tipPayout.personnel?.name || '—' }, { label: 'Tip', value: tipPayout.code }, { label: 'Amount', value: formatPeso(tipPayout.amount) }, { label: 'Funding Source', value: (tipData.options?.payout_accounts || []).find((a) => String(a.id) === String(tipPayout.payout_account_id))?.name || '—' }]} confirmLabel="Release Tip" busy={busy} onCancel={() => setTipConfirmation(false)} onConfirm={releaseTip} /> : null}
 
       {paymentForm ? <Modal wide title="Mark Payroll Paid" subtitle="Allocate the Net Pay across the actual business funding sources used. You may use up to 5 different sources." onClose={() => setPaymentForm(null)}>
         <form className="page-stack" onSubmit={submitPayrollPayment}>
