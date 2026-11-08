@@ -83,6 +83,10 @@ test('accounts payable lists unpaid expenses and settles them through mapped pay
     $payment = AccountingJournalEntry::query()->where('source_type', 'EXPENSE')->where('source_id', $expenseId)->where('source_event', 'PAYMENT')->with('lines')->firstOrFail();
     expect((float) $payment->lines->firstWhere('account_key', 'ACCOUNTS_PAYABLE')->debit)->toBe(3500.0)
         ->and((float) $payment->lines->where('account_id', $this->bank->id)->sum('credit'))->toBe(3500.0);
+
+    $this->actingAs($this->user)->getJson('/api/v1/accounting/accounts-payable?state=PAID')
+        ->assertOk()->assertJsonPath('rows.0.payment_status', 'PAID')
+        ->assertJsonPath('rows.0.outstanding_amount', 0);
 });
 
 test('accounts payable settles an unpaid stock receipt and clears supplier payable', function () {
@@ -157,4 +161,62 @@ test('petty cash module exposes posting accounts and posts an auditable entry', 
     $journal = AccountingJournalEntry::query()->where('source_type', 'PETTY_CASH')->where('source_id', $id)->with('lines')->firstOrFail();
     expect((float) $journal->lines->firstWhere('account_key', 'PETTY_CASH')->debit)->toBe(1000.0)
         ->and((float) $journal->lines->where('account_id', $bank->id)->sum('credit'))->toBe(1000.0);
+});
+
+
+test('manual AP entry creates one unpaid liability and rejects duplicate supplier bill', function () {
+    $utilities = ChartOfAccount::query()->where('business_id', $this->user->business_id)->where('code', '6102')->firstOrFail();
+    $payload = [
+        'branch_id' => $this->user->default_branch_id,
+        'expense_date' => $this->today,
+        'vendor_payee' => 'Monthly Electricity',
+        'reference' => 'MERALCO-BILL-2026-11',
+        'due_date' => \Carbon\CarbonImmutable::parse($this->today)->addDays(15)->toDateString(),
+        'description' => 'November electricity bill',
+        'attachment_tokens' => [$this->supportingDocumentToken($this->user, 'expenses')],
+        'lines' => [['account_id' => $utilities->id, 'description' => 'Electricity', 'amount' => 1500]],
+    ];
+    $created = $this->actingAs($this->user)->postJson('/api/v1/accounting/accounts-payable/manual', $payload)
+        ->assertCreated()->assertJsonPath('source_type', 'EXPENSE');
+    $id = $created->json('source_id');
+    expect(\App\Models\Expense::findOrFail($id)->payment_status)->toBe('UNPAID')
+        ->and(\App\Models\Expense::findOrFail($id)->due_date->toDateString())->toBe($payload['due_date']);
+    $this->actingAs($this->user)->getJson('/api/v1/accounting/accounts-payable?as_of='.$this->today.'&due_from='.$payload['due_date'].'&due_to='.$payload['due_date'])
+        ->assertOk()->assertJsonPath('rows.0.due_date', $payload['due_date']);
+    $this->actingAs($this->user)->getJson('/api/v1/accounting/accounts-payable?as_of='.$this->today.'&due_to='.$this->today)
+        ->assertOk()->assertJsonCount(0, 'rows');
+    expect(AccountingJournalEntry::query()->where('source_type', 'EXPENSE')->where('source_id', $id)->where('source_event', 'POST')->count())->toBe(1);
+    $this->actingAs($this->user)->postJson('/api/v1/accounting/accounts-payable/manual', $payload)
+        ->assertStatus(422);
+    expect(\App\Models\Expense::query()->where('vendor_payee', 'Monthly Electricity')->count())->toBe(1);
+});
+
+test('disbursements shows payment once and excludes the unpaid accrual', function () {
+    $utilities = ChartOfAccount::query()->where('business_id', $this->user->business_id)->where('code', '6102')->firstOrFail();
+    $id = $this->actingAs($this->user)->postJson('/api/v1/expenses', [
+        'attachment_tokens' => [$this->supportingDocumentToken($this->user, 'expenses')],
+        'branch_id' => $this->user->default_branch_id,
+        'expense_date' => $this->today,
+        'vendor_payee' => 'Utility Vendor', 'reference' => 'UTL-DISB-001',
+        'payment_status' => 'UNPAID',
+        'lines' => [['account_id' => $utilities->id, 'amount' => 2750]],
+    ])->assertCreated()->json('expense.id');
+    $this->actingAs($this->user)->postJson('/api/v1/expenses/'.$id.'/post')->assertOk();
+    $this->actingAs($this->user)->getJson('/api/v1/accounting/disbursements?source=EXPENSE')
+        ->assertOk()->assertJsonPath('summary.count', 0);
+    $this->actingAs($this->user)->postJson('/api/v1/accounting/accounts-payable/expense/'.$id.'/pay', [
+        'payment_splits' => [['funding_account_id' => $this->bank->id, 'amount' => 2750, 'reference' => 'BDO-UTL-001']],
+    ])->assertOk();
+    $this->actingAs($this->user)->getJson('/api/v1/accounting/disbursements?source=EXPENSE')
+        ->assertOk()->assertJsonPath('summary.count', 1)->assertJsonPath('rows.0.amount', 2750)
+        ->assertJsonPath('rows.0.source_label', 'Manual Entry (AP Expense)');
+    $this->actingAs($this->user)->getJson('/api/v1/accounting/disbursements?source=MANUAL_AP')
+        ->assertOk()->assertJsonPath('summary.count', 1);
+    $this->actingAs($this->user)->getJson('/api/v1/accounting/disbursements?source=MANUAL_ENTRY')
+        ->assertOk()->assertJsonPath('summary.count', 0);
+    $this->actingAs($this->user)->postJson('/api/v1/accounting/accounts-payable/expense/'.$id.'/pay', [
+        'payment_splits' => [['funding_account_id' => $this->bank->id, 'amount' => 2750]],
+    ])->assertStatus(422);
+    $this->actingAs($this->user)->getJson('/api/v1/accounting/disbursements?source=EXPENSE')
+        ->assertOk()->assertJsonPath('summary.count', 1);
 });

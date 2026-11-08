@@ -9,6 +9,7 @@ use App\Models\Expense;
 use App\Models\InventoryReceipt;
 use App\Models\InventoryStockReturn;
 use App\Services\Accounting\ExpenseService;
+use App\Services\Foundation\SupportingDocumentService;
 use App\Services\Inventory\InventoryControlService;
 use Carbon\CarbonImmutable;
 use DomainException;
@@ -16,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AccountsPayableController extends Controller
 {
@@ -25,7 +27,15 @@ class AccountsPayableController extends Controller
         $asOf = $request->query('as_of', now()->toDateString());
         $branchId = $request->filled('branch_id') ? $request->integer('branch_id') : null;
         $source = strtoupper((string) $request->query('source', 'ALL'));
+        $state = strtoupper((string) $request->query('state', 'OPEN'));
+        if (! in_array($state, ['OPEN', 'PAID'], true)) $state = 'OPEN';
         $search = trim((string) $request->query('search', ''));
+        $dueFrom = $request->filled('due_from') ? $request->query('due_from') : null;
+        $dueTo = $request->filled('due_to') ? $request->query('due_to') : null;
+        $request->validate([
+            'due_from' => ['nullable', 'date'],
+            'due_to' => ['nullable', 'date', 'after_or_equal:due_from'],
+        ]);
 
         $rows = collect();
 
@@ -33,8 +43,11 @@ class AccountsPayableController extends Controller
             $expenses = Expense::query()
                 ->where('business_id', $businessId)
                 ->where('status', 'POSTED')
-                ->where('payment_status', '<>', 'PAID')
+                ->where('payment_status', $state === 'PAID' ? '=' : '<>', 'PAID')
+                ->when($state === 'PAID', fn ($q) => $q->whereIn('id', DB::table('ap_control_numbers')->where('business_id', $businessId)->where('source_type', 'EXPENSE')->select('source_id')))
                 ->whereDate('expense_date', '<=', $asOf)
+                ->when($dueFrom, fn ($q) => $q->whereDate('due_date', '>=', $dueFrom))
+                ->when($dueTo, fn ($q) => $q->whereDate('due_date', '<=', $dueTo))
                 ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
                 ->when($search !== '', function ($q) use ($search) {
                     $q->where(function ($w) use ($search) {
@@ -55,18 +68,22 @@ class AccountsPayableController extends Controller
                     $expense->vendor_payee,
                     $expense->branch?->name,
                     (float) $expense->total_amount,
-                    (float) $expense->total_amount,
+                    $state === 'PAID' ? 0.0 : (float) $expense->total_amount,
                     $expense->reference,
                     $asOf,
+                    [],
+                    $expense->due_date?->toDateString(),
                 ));
             }
         }
 
-        if (in_array($source, ['ALL', 'INVENTORY_RECEIPT'], true)) {
+        // Stock receipts do not yet carry due dates. Date-filtered views exclude unknown due dates.
+        if (! $dueFrom && ! $dueTo && in_array($source, ['ALL', 'INVENTORY_RECEIPT'], true)) {
             $receipts = InventoryReceipt::query()
                 ->where('business_id', $businessId)
                 ->where('status', 'POSTED')
-                ->where('payment_status', '<>', 'PAID')
+                ->where('payment_status', $state === 'PAID' ? '=' : '<>', 'PAID')
+                ->when($state === 'PAID', fn ($q) => $q->whereIn('id', DB::table('ap_control_numbers')->where('business_id', $businessId)->where('source_type', 'INVENTORY_RECEIPT')->select('source_id')))
                 ->whereDate('received_date', '<=', $asOf)
                 ->when($branchId, fn ($q) => $q->where('branch_id', $branchId))
                 ->when($search !== '', function ($q) use ($search) {
@@ -89,7 +106,7 @@ class AccountsPayableController extends Controller
                     ->where('status', 'APPROVED')
                     ->sum('ap_credit_amount'), 2);
                 $outstanding = round(max(0, $amount - $paidAtReceipt - $returnCredits), 2);
-                if ($outstanding <= 0.009) continue;
+                if ($state === 'OPEN' && $outstanding <= 0.009) continue;
 
                 $rows->push($this->payableRow(
                     'INVENTORY_RECEIPT',
@@ -123,7 +140,7 @@ class AccountsPayableController extends Controller
         $rows = $rows->sortBy([['document_date', 'desc'], ['source_id', 'desc'], ['code', 'desc']])->values();
         $operationalTotal = round((float) $rows->sum('outstanding_amount'), 2);
         $ledgerBalance = $this->ledgerBalance($businessId, $asOf, $branchId);
-        $canReconcile = $source === 'ALL' && $search === '';
+        $canReconcile = $state === 'OPEN' && $source === 'ALL' && $search === '' && ! $dueFrom && ! $dueTo;
         $variance = $canReconcile ? round($ledgerBalance - $operationalTotal, 2) : null;
 
         $summary = [
@@ -143,6 +160,115 @@ class AccountsPayableController extends Controller
             'summary' => $summary,
             'options' => $this->options($businessId),
             'as_of' => $asOf,
+        ]);
+    }
+
+    /**
+     * Create a manual unpaid AP bill through the existing Expense posting waterfall.
+     * No second journal is created here. Recurring bills may use the same payee
+     * provided each period has its own bill date / invoice reference.
+     */
+    public function storeManual(
+        Request $request,
+        ExpenseService $expenseService,
+        SupportingDocumentService $documents,
+    ): JsonResponse {
+        $businessId = (int) $request->user()->business_id;
+        $data = $request->validate([
+            'branch_id' => ['required', 'integer', Rule::exists('branches', 'id')->where('business_id', $businessId)],
+            'expense_date' => ['required', 'date'],
+            'due_date' => ['required', 'date', 'after_or_equal:expense_date'],
+            'vendor_payee' => ['required', 'string', 'max:180'],
+            'reference' => ['required', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string', 'max:2000'],
+            'attachment_tokens' => ['required', 'array', 'min:1', 'max:10'],
+            'attachment_tokens.*' => ['required', 'uuid', 'distinct'],
+            'lines' => ['required', 'array', 'min:1'],
+            'lines.*.account_id' => ['required', 'integer'],
+            'lines.*.description' => ['nullable', 'string', 'max:255'],
+            'lines.*.amount' => ['required', 'numeric', 'gt:0', 'max:999999999999.99'],
+        ]);
+
+        $accountIds = collect($data['lines'])->pluck('account_id')->unique()->values();
+        $validCount = ChartOfAccount::query()
+            ->where('business_id', $businessId)
+            ->whereIn('id', $accountIds)
+            ->where('active', true)
+            ->where('posting_type', 'POSTING')
+            ->where(function ($q) {
+                $q->whereIn('account_type', ['OPERATING_EXPENSE', 'COST_OF_SALES'])
+                    ->orWhere(function ($q) {
+                        $q->where('account_type', 'ASSET')
+                            ->whereNull('system_key')->where('is_cash_account', false);
+                    });
+            })->count();
+        if ($validCount !== $accountIds->count()) {
+            return response()->json(['message' => 'Select valid expense or asset COA accounts.'], 422);
+        }
+
+        try {
+            $expense = DB::transaction(function () use ($request, $data, $businessId, $expenseService, $documents) {
+                // A business-row lock serializes concurrent manual AP submissions.
+                DB::table('businesses')->where('id', $businessId)->lockForUpdate()->first();
+                $normalizedPayee = mb_strtolower(trim($data['vendor_payee']));
+                $normalizedRef = mb_strtolower(trim($data['reference']));
+                $duplicate = Expense::query()
+                    ->where('business_id', $businessId)
+                    ->where('branch_id', $data['branch_id'])
+                    ->whereDate('expense_date', $data['expense_date'])
+                    ->whereRaw('LOWER(TRIM(vendor_payee)) = ?', [$normalizedPayee])
+                    ->whereRaw('LOWER(TRIM(reference)) = ?', [$normalizedRef])
+                    ->where('status', '<>', 'REVERSED')
+                    ->exists();
+                $sameReceipt = InventoryReceipt::query()
+                    ->where('business_id', $businessId)
+                    ->where('branch_id', $data['branch_id'])
+                    ->whereRaw('LOWER(TRIM(reference_no)) = ?', [$normalizedRef])
+                    ->where(function ($q) use ($normalizedPayee) {
+                        $q->whereRaw('LOWER(TRIM(supplier_name)) = ?', [$normalizedPayee])
+                            ->orWhereHas('supplier', fn ($supplier) => $supplier
+                                ->whereRaw('LOWER(TRIM(company_name)) = ?', [$normalizedPayee])
+                                ->orWhereRaw('LOWER(TRIM(code_name)) = ?', [$normalizedPayee]));
+                    })
+                    ->where('status', 'POSTED')
+                    ->exists();
+                if ($duplicate || $sameReceipt) {
+                    throw new DomainException('This bill reference is already recorded for the selected branch and payee/date, or matches a posted stock receipt. Open the existing source instead of creating another payable.');
+                }
+                $expense = $expenseService->create($request->user(), [
+                    ...$data,
+                    'payment_status' => 'UNPAID',
+                    'payment_splits' => [],
+                ]);
+                $documents->claimTokens($request->user(), $data['attachment_tokens'], 'expenses', 'EXPENSE', (int)$expense->id, 'EXPENSE_SUPPORT');
+                return $expenseService->post($request->user(), $expense);
+            });
+            return response()->json([
+                'message' => 'Manual AP bill posted. Pay it once through Accounts Payable.',
+                'source_type' => 'EXPENSE',
+                'source_id' => $expense->id,
+                'source_code' => $expense->code,
+            ], 201);
+        } catch (DomainException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+    }
+
+    public function manualOptions(Request $request): JsonResponse
+    {
+        $businessId = (int) $request->user()->business_id;
+        return response()->json([
+            'branches' => DB::table('branches')->where('business_id', $businessId)->where('status', 'ACTIVE')->orderBy('name')->get(['id','name']),
+            'accounts' => ChartOfAccount::query()
+                ->where('business_id', $businessId)->where('active', true)
+                ->where('posting_type', 'POSTING')
+                ->where(function ($q) {
+                    $q->whereIn('account_type', ['OPERATING_EXPENSE','COST_OF_SALES'])
+                        ->orWhere(function ($q) {
+                            $q->where('account_type', 'ASSET')->whereNull('system_key')->where('is_cash_account', false);
+                        });
+                })->orderBy('code')->get(['id','code','name']),
         ]);
     }
 
@@ -195,6 +321,7 @@ class AccountsPayableController extends Controller
         ?string $reference,
         string $asOf,
         array $items = [],
+        ?string $dueDate = null,
     ): array {
         $documentDate = $date ?: $asOf;
         $age = max(0, CarbonImmutable::parse($documentDate)->startOfDay()->diffInDays(CarbonImmutable::parse($asOf)->startOfDay(), false));
@@ -205,6 +332,7 @@ class AccountsPayableController extends Controller
             'source_id' => $sourceId,
             'code' => $code,
             'document_date' => $documentDate,
+            'due_date' => $dueDate,
             'payee' => $payee,
             'branch' => $branch,
             'reference' => $reference,
@@ -213,7 +341,7 @@ class AccountsPayableController extends Controller
             'outstanding_amount' => round($outstandingAmount, 2),
             'age_days' => $age,
             'aging_bucket' => $bucket,
-            'payment_status' => 'UNPAID',
+            'payment_status' => $outstandingAmount <= 0.009 ? 'PAID' : 'UNPAID',
         ];
     }
 

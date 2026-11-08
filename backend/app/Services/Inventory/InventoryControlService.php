@@ -369,6 +369,11 @@ class InventoryControlService
         }
 
         return DB::transaction(function () use ($actor, $receipt, $outstanding, $paymentSplits, $existingSplits) {
+            $receipt = InventoryReceipt::query()->where('business_id', $actor->business_id)
+                ->whereKey($receipt->id)->lockForUpdate()->firstOrFail();
+            if ($receipt->status !== 'POSTED' || $receipt->payment_status === 'PAID') {
+                throw new DomainException('Supplier payable was already settled or is no longer payable.');
+            }
             $journalLines = [[
                 'account_key' => 'ACCOUNTS_PAYABLE',
                 'debit' => $outstanding,

@@ -30,6 +30,7 @@ function statusClass(status) {
 
 export default function PayrollPage() {
   const { user, hasPermission } = useAuth()
+  const [activeSection, setActiveSection] = useState('RUNS')
   const [data, setData] = useState(null)
   const [tipData, setTipData] = useState({ rows: [], options: {} })
   const [tipPayout, setTipPayout] = useState(null)
@@ -346,13 +347,22 @@ export default function PayrollPage() {
       <div className="page-heading"><div><p className="eyebrow">HR & Payroll</p><h1 className="live-page-title">Payroll <PageRefreshButton label="Refresh payroll" onRefresh={load} /></h1><p>Draft, review, approve, and mark payroll paid without rewriting approved history.</p><div className="toolbar-row payroll-heading-actions"><button className="primary-button" type="button" onClick={() => setShowRun(true)}>Payroll Draft</button><button className="secondary-button" type="button" onClick={() => setShowAdjustment(true)}>Adjustment</button></div></div></div>
       {message ? <div className="form-alert error">{message}</div> : null}
 
-      <section className="content-card">
+      <div className="booking-tabs" role="tablist" aria-label="Payroll sections">
+        {[
+          ['RUNS', 'Payroll Runs'],
+          ...(canViewTips ? [['TIPS', 'Tips Release']] : []),
+          ['ADJUSTMENTS', 'Open Payroll Adjustments'],
+          ['RECOVERIES', 'Open Payroll Recoveries'],
+        ].map(([key, title]) => <button key={key} type="button" role="tab" aria-selected={activeSection===key} className={activeSection===key?'active':''} onClick={()=>setActiveSection(key)}>{title}</button>)}
+      </div>
+
+      {activeSection==='RUNS' ? <section className="content-card">
         <div className="section-heading"><div><h2>Payroll Runs</h2></div></div>
         <div className="table-wrap"><table className="data-table"><thead><tr><th>Payroll</th><th>Period</th><th>Pay Date</th><th>Gross</th><th>Adjustments</th><th>Cash Advance</th><th>Prior Recovery</th><th>Statutory</th><th>Net Pay</th><th>Status</th><th className="actions-column">Action</th></tr></thead><tbody>{(data?.runs || []).map((row) => <tr key={row.id}><td><strong>{row.code}</strong><span className="table-subline">{row.lines_count ?? 0} personnel</span></td><td>{formatDisplayDate(row.period_start)} → {formatDisplayDate(row.period_end)}</td><td>{formatDisplayDate(row.pay_date)}</td><td>{formatPeso(row.gross_compensation)}</td><td>{formatPeso(row.adjustments_total)}</td><td>{formatPeso(row.cash_advance_deductions)}</td><td>{formatPeso(row.payroll_recovery_deductions)}</td><td>{formatPeso(row.statutory_employee_deductions)}</td><td><strong>{formatPeso(row.net_pay)}</strong></td><td><span className={`status-pill ${statusClass(row.status)}`}>{row.status}</span></td><td className="action-cell"><ActionMenu items={[{ label: 'View', onClick: () => openRun(row.id) }]} /></td></tr>)}</tbody></table></div>
         {!(data?.runs || []).length ? <div className="empty-state">No payroll runs yet.</div> : null}
-      </section>
+      </section> : null}
 
-      {canViewTips ? <section className="content-card">
+      {activeSection==='TIPS' && canViewTips ? <section className="content-card">
         <div className="section-heading"><div><h2>Tips Release</h2><p>Review electronic tips alongside payroll drafts. Tips are liabilities paid separately and are excluded from Gross Pay, Net Pay, payroll deductions and commissions. Releasing a tip posts its own accounting journal.</p></div></div>
         <div className="table-wrap"><table className="data-table"><thead><tr><th>Tip</th><th>Received</th><th>Personnel</th><th>Amount</th><th>Status</th><th>Paid From</th><th className="actions-column">Action</th></tr></thead><tbody>
           {(tipData.rows || []).map((tip) => <tr key={tip.id}><td><strong>{tip.code}</strong></td><td>{tip.created_at ? formatDisplayDate(tip.created_at) : '—'}</td><td>{tip.personnel?.name || '—'}</td><td><strong>{formatPeso(tip.amount)}</strong></td><td><span className={`status-pill ${tip.status === 'PAID' ? 'success' : 'warning'}`}>{tip.status}</span></td><td>{tip.payout_account?.name || '—'}</td><td className="action-cell"><ActionMenu items={tip.status === 'PENDING' && canReleaseTips ? [{ label: 'Release Tip', onClick: () => beginTipRelease(tip) }] : []} /></td></tr>)}
@@ -360,7 +370,7 @@ export default function PayrollPage() {
         </tbody></table></div>
       </section> : null}
 
-      <section className="content-card">
+      {activeSection==='ADJUSTMENTS' ? <section className="content-card">
         <div className="section-heading"><div><h2>Open Payroll Adjustments</h2><p>Allowances, bonuses, deductions, and corrections that will be picked up by the matching Payroll Draft.</p></div></div>
         <div className="table-wrap"><table className="data-table"><thead><tr><th>Date</th><th>Personnel</th><th>Type</th><th>Description</th><th>Amount</th><th>Status</th><th className="actions-column">Action</th></tr></thead><tbody>{(data?.adjustments || []).map((row) => {
           const pending = row.pending_reversal
@@ -370,13 +380,13 @@ export default function PayrollPage() {
           ] : []) : [row.status === 'OPEN' && hasPermission('payroll', 'CREATE') ? { label: 'Request Reversal', onClick: () => requestReverseAdjustment(row) } : null]} /></td></tr>
         })}</tbody></table></div>
         {!(data?.adjustments || []).length ? <div className="empty-state">No open adjustments.</div> : null}
-      </section>
+      </section> : null}
 
-      <section className="content-card">
+      {activeSection==='RECOVERIES' ? <section className="content-card">
         <div className="section-heading"><div><h2>Open Payroll Recoveries</h2><p>Post-payroll commission and incentive reversals are carried forward automatically. No manual selection is required.</p></div></div>
         <div className="table-wrap"><table className="data-table"><thead><tr><th>Recovery</th><th>Personnel</th><th>Type</th><th>Source</th><th>Original Payroll</th><th>Total</th><th>Applied</th><th>Remaining</th><th>Status</th></tr></thead><tbody>{(data?.recoveries || []).map((row) => <tr key={row.id}><td><strong>{row.code}</strong><span className="table-subline">{row.origin_work_date ? formatDisplayDate(row.origin_work_date) : 'Historical payroll'}</span></td><td>{row.personnel?.name || '—'}</td><td>{row.recovery_type}</td><td>{row.source_label || 'Transaction adjustment'}<span className="table-subline">{row.source_action_code || row.reason || '—'}</span></td><td>{row.original_payroll_code || '—'}</td><td>{formatPeso(row.recovery_amount)}</td><td>{formatPeso(row.applied_amount)}</td><td><strong>{formatPeso(row.remaining_amount)}</strong></td><td><span className={`status-pill ${row.status === 'PARTIAL' ? 'warning' : 'info'}`}>{row.status}</span></td></tr>)}</tbody></table></div>
         {!(data?.recoveries || []).length ? <div className="empty-state">No outstanding payroll recoveries.</div> : null}
-      </section>
+      </section> : null}
 
       {showRun ? <Modal title="Create Payroll Draft" subtitle="Sources remain editable only while the run is Draft. Electronic staff tips are reviewed separately below Payroll Runs and released independently of Net Pay." onClose={() => setShowRun(false)}><form className="form-grid payroll-run-form" onSubmit={createRun}>
         <label className="form-field"><span>Period Start</span><input type="date" required max={today} value={runForm.period_start} onChange={(e) => setRunForm((c) => ({ ...c, period_start: e.target.value }))} /></label>

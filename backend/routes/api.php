@@ -78,15 +78,12 @@ Route::prefix('v1')->group(function () {
     Route::get('/public/branding/logo/{business}', [PublicBrandingController::class, 'logo']);
     Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 
-    Route::middleware(['auth:sanctum', \App\Http\Middleware\RequireSubscriptionState::class])->group(function () {
+    Route::middleware('auth:sanctum')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::put('/auth/access-code', [AuthController::class, 'changeAccessCode']);
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 
         Route::get('/bootstrap', BootstrapController::class);
-
-        Route::get('/subscription', [\App\Http\Controllers\Api\V1\SubscriptionController::class, 'show']);
-        Route::post('/subscription/activate', [\App\Http\Controllers\Api\V1\SubscriptionController::class, 'activate'])->middleware('throttle:10,1');
 
 
         Route::get('/workflow-reasons', [WorkflowReasonController::class, 'index']);
@@ -412,7 +409,10 @@ Route::prefix('v1')->group(function () {
                 ->middleware('permission:coa,TOGGLE');
 
             Route::get('/accounts-receivable', [AccountingOperationsController::class, 'accountsReceivable'])->middleware('permission:ar,VIEW');
+            Route::get('/disbursements', [\App\Http\Controllers\Api\V1\Accounting\DisbursementRegisterController::class, 'index'])->middleware('permission:expenses,VIEW');
             Route::get('/accounts-payable', [AccountsPayableController::class, 'index'])->middleware('permission:ap,VIEW');
+            Route::get('/accounts-payable/manual-options', [AccountsPayableController::class, 'manualOptions'])->middleware(['permission:ap,VIEW', 'permission:expenses,CREATE']);
+            Route::post('/accounts-payable/manual', [AccountsPayableController::class, 'storeManual'])->middleware(['permission:ap,VIEW', 'permission:expenses,CREATE', 'permission:expenses,POST']);
             Route::post('/accounts-payable/{sourceType}/{sourceId}/pay', [AccountsPayableController::class, 'pay'])->middleware('permission:ap,PAY');
             Route::get('/collections', [AccountingOperationsController::class, 'collections'])->middleware('permission:collections,VIEW');
 
@@ -439,8 +439,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/development-reset/execute', [DevelopmentResetController::class, 'execute']);
             Route::post('/development-reset/cancel', [DevelopmentResetController::class, 'cancel']);
 
-            Route::get('/opening-balances', [OpeningBalanceController::class, 'index'])->middleware('subscription:opening-balances');
-            Route::post('/opening-balances', [OpeningBalanceController::class, 'store'])->middleware('subscription:opening-balances');
+            Route::get('/opening-balances', [OpeningBalanceController::class, 'index']);
+            Route::post('/opening-balances', [OpeningBalanceController::class, 'store']);
 
             Route::get('/business-setup', [BusinessSetupController::class, 'show'])
                 ->middleware('permission:business-setup,VIEW');

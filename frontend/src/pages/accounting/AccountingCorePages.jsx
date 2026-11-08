@@ -195,12 +195,12 @@ export function CashManagementPage() {
   </div>
 }
 
-export function CashFlowPage() {
+export function CashFlowPage({ embedded = false }) {
   const [filters, setFilters] = useState({ from: monthStart(), to: today(), branch_id: '' })
   const [data, setData] = useState({ rows: [], summary: {}, options: {} })
   const load = useCallback(async () => { const response = await api.get('/v1/accounting/cash-flow', { params: { ...filters, branch_id: filters.branch_id || undefined } }); setData(response.data) }, [filters])
   useEffect(() => { load() }, [])
-  return <div className="page-stack accounting-page"><Heading title="Cash Flow Statement" subtitle="Ledger-derived cash movement grouped into Operating, Investing, and Financing activities. Refund Due is non-cash until the approved Refund actually returns money." onRefresh={load} /><section className="cash-flow-card-grid">
+  return <div className={embedded ? 'page-stack' : 'page-stack accounting-page'}>{!embedded ? <Heading title="Cash Flow Statement" subtitle="Ledger-derived cash movement grouped into Operating, Investing, and Financing activities. Refund Due is non-cash until the approved Refund actually returns money." onRefresh={load} /> : null}<section className="cash-flow-card-grid">
     <article className={`cash-balance-card cash-flow-card ${Number(data.summary?.opening_cash || 0) < 0 ? 'is-negative' : ''}`}><strong className="cash-balance-name cash-flow-card-label">Opening Cash</strong><div className="cash-balance-amount">{peso(data.summary?.opening_cash)}</div></article>
     <article className={`cash-balance-card cash-flow-card ${Number(data.summary?.ending_cash || 0) < 0 ? 'is-negative' : ''}`}><strong className="cash-balance-name cash-flow-card-label">Ending Cash</strong><div className="cash-balance-amount">{peso(data.summary?.ending_cash)}</div></article>
     <article className={`cash-balance-card cash-flow-card ${Number(data.summary?.operating || 0) < 0 ? 'is-negative' : ''}`}><strong className="cash-balance-name cash-flow-card-label">Operating</strong><div className="cash-balance-amount">{peso(data.summary?.operating)}</div></article>
@@ -233,8 +233,9 @@ export function FinancialStatementsPage() {
   const grouped = (yearly.rows || []).reduce((out, row) => { const key = `${row.section}|${row.group_code}`; if (!out[key]) out[key] = { section: row.section, group_code: row.group_code, group_name: row.group_name, rows: [] }; out[key].rows.push(row); return out }, {})
   const summaryRow = (label, key, emphasis='') => <tr className={`statement-month-summary ${emphasis}`}><td><strong>{label}</strong></td>{(yearly.summary?.[key] || Array(12).fill(0)).map((value,i)=><td key={i}><strong>{view==='PERCENT' && key==='net_revenue' ? '100%' : amountCell(value,i)}</strong></td>)}<td><strong>{view==='PERCENT' && key==='net_revenue' ? '100%' : totalCell(yearly.totals?.[key])}</strong></td></tr>
   const bsSection = (title, rows) => <><tr className="statement-section"><td colSpan="2"><strong>{title}</strong></td></tr>{(rows || []).map((row) => <tr key={row.code}><td>{row.code} · {row.name}</td><td>{peso(row.amount)}</td></tr>)}</>
-  return <div className="page-stack accounting-page"><Heading title="Financial Statements" subtitle="Income Statement and Balance Sheet are separated for clearer management reporting." onRefresh={load} />
-    <div className="statement-main-tabs"><button type="button" className={tab==='INCOME'?'active':''} onClick={()=>setTab('INCOME')}>Income Statement</button><button type="button" className={tab==='BALANCE'?'active':''} onClick={()=>setTab('BALANCE')}>Balance Sheet</button></div>
+  return <div className="page-stack accounting-page"><Heading title="Financial Statements" subtitle="Income Statement, Balance Sheet, and Cash Flow Statement." onRefresh={load} />
+    <div className="booking-tabs" role="tablist" aria-label="Financial statement sections"><button type="button" role="tab" aria-selected={tab==='INCOME'} className={tab==='INCOME'?'active':''} onClick={()=>setTab('INCOME')}>Income Statement</button><button type="button" role="tab" aria-selected={tab==='BALANCE'} className={tab==='BALANCE'?'active':''} onClick={()=>setTab('BALANCE')}>Balance Sheet</button><button type="button" role="tab" aria-selected={tab==='CASHFLOW'} className={tab==='CASHFLOW'?'active':''} onClick={()=>setTab('CASHFLOW')}>Cash Flow Statement</button></div>
+    {tab==='CASHFLOW' ? <CashFlowPage embedded /> : <>
     <section className="content-card"><div className="financial-statement-filters">
       {tab==='INCOME' ? <label className="form-field"><span>Year</span><SearchableSelect value={filters.year} onChange={(e)=>{const year=Number(e.target.value);setFilters((c)=>({...c,year,from:`${year}-01-01`,to:`${year}-12-31`}))}}>{Array.from({length:7},(_,i)=>currentYear-4+i).map((year)=><option key={year}>{year}</option>)}</SearchableSelect></label> : <label className="form-field"><span>As of</span><input type="date" value={filters.to} onChange={(e)=>setFilters((c)=>({...c,to:e.target.value}))} /></label>}
       <label className="form-field"><span>Branch</span><SearchableSelect value={filters.branch_id} onChange={(e)=>setFilters((c)=>({...c,branch_id:e.target.value}))}><option value="">All Branches</option>{(data.options?.branches||[]).map((branch)=><option key={branch.id} value={branch.id}>{branch.name}</option>)}</SearchableSelect></label>
@@ -249,6 +250,7 @@ export function FinancialStatementsPage() {
       {Object.values(grouped).filter((group)=>group.section==='OPERATING_EXPENSE').map((group)=><FragmentGroup key={`o-${group.group_code}`} group={group} amountCell={amountCell} totalCell={totalCell} />)}
       {summaryRow('TOTAL OPERATING EXPENSE','operating_expenses','major')}{summaryRow('NET PROFIT','net_income','net')}
     </tbody></table></div></section> : <section className="content-card"><div className="table-wrap"><table className="data-table statement-table"><tbody>{bsSection('Assets',balance.assets)}<tr className="statement-total"><td>Total Assets</td><td>{peso(balance.asset_total)}</td></tr>{bsSection('Liabilities',balance.liabilities)}<tr className="statement-total"><td>Total Liabilities</td><td>{peso(balance.liability_total)}</td></tr>{bsSection('Equity',balance.equity)}<tr className="statement-total"><td>Total Equity</td><td>{peso(balance.equity_total)}</td></tr></tbody></table></div></section>}
+    </>}
   </div>
 }
 
