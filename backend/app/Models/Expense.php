@@ -12,7 +12,7 @@ class Expense extends Model
     use HasFactory;
 
     protected $fillable = [
-        'business_id', 'branch_id', 'code', 'expense_date', 'vendor_payee', 'reference',
+        'business_id', 'branch_id', 'code', 'expense_date', 'due_date', 'vendor_payee', 'reference',
         'description', 'total_amount', 'status', 'payment_status', 'payment_account_id',
         'payment_method', 'payment_reference', 'payment_splits', 'paid_at', 'paid_by', 'attachment_disk',
         'attachment_path', 'attachment_name', 'attachment_mime', 'notes', 'posted_at',
@@ -23,6 +23,7 @@ class Expense extends Model
     {
         return [
             'expense_date' => 'immutable_date',
+            'due_date' => 'immutable_date',
             'total_amount' => 'decimal:2',
             'paid_at' => 'immutable_datetime',
             'posted_at' => 'immutable_datetime',

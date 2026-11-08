@@ -5,7 +5,6 @@ import SuperAdminRoute from '../features/auth/SuperAdminRoute'
 import AppLayout from '../layouts/AppLayout'
 import DashboardPage from '../pages/DashboardPage'
 import LoginPage from '../pages/LoginPage'
-import SetupPage from '../pages/SetupPage'
 import BusinessSetupPage from '../pages/admin/BusinessSetupPage'
 import BrandingPage from '../pages/admin/BrandingPage'
 import ReferenceListsPage from '../pages/admin/ReferenceListsPage'
@@ -16,7 +15,6 @@ import IncentiveRulesPage from '../pages/admin/IncentiveRulesPage'
 import UsersRolesPage from '../pages/admin/UsersRolesPage'
 import DevelopmentResetPage from '../pages/admin/DevelopmentResetPage'
 import OpeningBalancesPage from '../pages/admin/OpeningBalancesPage'
-import SubscriptionPage from '../pages/admin/SubscriptionPage'
 import AttendancePage from '../pages/hr/AttendancePage'
 import MyAttendancePage from '../pages/hr/MyAttendancePage'
 import LeaveManagementPage from '../pages/hr/LeaveManagementPage'
@@ -48,6 +46,7 @@ import ServiceConsumptionPage from '../pages/inventory/ServiceConsumptionPage'
 import ServiceBalancesPage from '../pages/packages/ServiceBalancesPage'
 import CustomerMixPage from '../pages/customers/CustomerMixPage'
 import ExpensesPage from '../pages/expense/ExpensesPage'
+import DisbursementsPage from '../pages/expense/DisbursementsPage'
 import PettyCashPage from '../pages/expense/PettyCashPage'
 import ChartOfAccountsPage from '../pages/accounting/ChartOfAccountsPage'
 import { GeneralLedgerPage, TrialBalancePage, CashManagementPage, CashFlowPage, DailyClosingPage, FinancialStatementsPage } from '../pages/accounting/AccountingCorePages'
@@ -55,8 +54,6 @@ import { AccountsReceivablePage, AccountsPayablePage, CollectionsPage, BankRecon
 import CashHandlingPage from '../pages/sales/CashHandlingPage'
 
 export const router = createBrowserRouter([
-  { path: '/setup', element: <SetupPage /> },
-  { path: '/onboarding', element: <Navigate to="/setup" replace /> },
   {
     path: '/login',
     element: <LoginPage />,
@@ -238,11 +235,11 @@ export const router = createBrowserRouter([
           },
           {
             path: '/expenses',
-            element: (
-              <ModuleRoute module="expenses">
-                <ExpensesPage />
-              </ModuleRoute>
-            ),
+            element: (<ModuleRoute module="expenses"><DisbursementsPage /></ModuleRoute>),
+          },
+          {
+            path: '/expenses/direct',
+            element: (<ModuleRoute module="expenses"><ExpensesPage /></ModuleRoute>),
           },
           {
             path: '/expenses/petty-cash',
@@ -329,11 +326,10 @@ export const router = createBrowserRouter([
             path: '/admin/opening-balances',
             element: (
               <SuperAdminRoute>
-                <ModuleRoute module="opening-balances"><OpeningBalancesPage /></ModuleRoute>
+                <OpeningBalancesPage />
               </SuperAdminRoute>
             ),
           },
-          { path: '/admin/subscription', element: <SuperAdminRoute><SubscriptionPage /></SuperAdminRoute> },
           {
             path: '/admin/development-reset',
             element: (

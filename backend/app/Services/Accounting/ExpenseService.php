@@ -49,6 +49,7 @@ class ExpenseService
                     $actor->business_id,
                 ),
                 'expense_date' => $data['expense_date'],
+                'due_date' => $data['due_date'] ?? null,
                 'vendor_payee' => $data['vendor_payee'],
                 'reference' => $data['reference'] ?? null,
                 'description' => $data['description'] ?? null,
@@ -84,6 +85,7 @@ class ExpenseService
             $expense->update([
                 'branch_id' => $data['branch_id'],
                 'expense_date' => $data['expense_date'],
+                'due_date' => $data['due_date'] ?? null,
                 'vendor_payee' => $data['vendor_payee'],
                 'reference' => $data['reference'] ?? null,
                 'description' => $data['description'] ?? null,
@@ -163,6 +165,11 @@ class ExpenseService
         if (abs($total - (float) $expense->total_amount) > 0.01) throw new DomainException('Split payment total must equal the expense total.');
 
         return DB::transaction(function () use ($actor, $expense, $splits) {
+            $expense = Expense::query()->where('business_id', $actor->business_id)
+                ->whereKey($expense->id)->lockForUpdate()->firstOrFail();
+            if ($expense->status !== 'POSTED' || $expense->payment_status === 'PAID') {
+                throw new DomainException('Payable was already settled or is no longer eligible for payment.');
+            }
             $ap = $this->requireSystemAccount($expense->business_id, 'ACCOUNTS_PAYABLE');
             $lines = [$this->journalLine(1, $ap, (float) $expense->total_amount, 0, 'Settle expense payable.')];
             $lineNo = 2;

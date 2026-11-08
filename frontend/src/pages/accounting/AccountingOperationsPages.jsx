@@ -2,6 +2,9 @@ import SearchableSelect from '../../components/common/SearchableSelect'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { api, getApiErrorMessage } from '../../api/client'
 import Modal from '../../components/common/Modal'
+import SupportingDocumentField from '../../components/common/SupportingDocumentField'
+import { uploadSupportingDocuments } from '../../utils/supportingDocuments'
+import { useAuth } from '../../context/AuthContext'
 import PageRefreshButton from '../../components/common/PageRefreshButton'
 import { formatPeso } from '../../utils/formatters'
 import './accounting-operations.css'
@@ -49,7 +52,11 @@ export function AccountsReceivablePage() {
 
 
 export function AccountsPayablePage() {
-  const [filters, setFilters] = useState({ as_of: today(), branch_id: '', source: 'ALL', search: '' })
+  const { hasPermission, user } = useAuth()
+  const [newBill, setNewBill] = useState(null)
+  const [newBillOptions, setNewBillOptions] = useState({ branches: [], accounts: [] })
+  const [newBillFiles, setNewBillFiles] = useState([])
+  const [filters, setFilters] = useState({ as_of: today(), branch_id: '', source: 'ALL', state: 'OPEN', search: '', due_from: '', due_to: '' })
   const [data, setData] = useState({ rows: [], summary: {}, options: {} })
   const [paying, setPaying] = useState(null)
   const [message, setMessage] = useState('')
@@ -92,10 +99,48 @@ export function AccountsPayablePage() {
     }
   }
 
+  const openNewBill = async () => {
+    setMessage('')
+    try {
+      const response = await api.get('/v1/accounting/accounts-payable/manual-options')
+      const options = response.data || { branches: [], accounts: [] }
+      setNewBillOptions(options)
+      setNewBillFiles([])
+      setNewBill({ branch_id: String(user?.default_branch_id || options.branches?.[0]?.id || ''),
+        expense_date: today(), due_date: today(), vendor_payee: '', reference: '', description: '', notes: '',
+        lines: [{ account_id: '', description: '', amount: '' }] })
+    } catch (error) { setMessage(getApiErrorMessage(error, 'Unable to open AP Entry.')) }
+  }
+
+  const saveNewBill = async (event) => {
+    event.preventDefault()
+    if (saving) return
+    setSaving(true)
+    setMessage('')
+    try {
+      if (!newBillFiles.length) throw new Error('Attach the supplier invoice or billing statement.')
+      const attachment_tokens = await uploadSupportingDocuments(newBillFiles, 'expenses', 'EXPENSE_SUPPORT')
+      await api.post('/v1/accounting/accounts-payable/manual', {
+        ...newBill, branch_id: Number(newBill.branch_id), attachment_tokens,
+        lines: newBill.lines.map((line) => ({ account_id: Number(line.account_id),
+          description: line.description || null, amount: Number(line.amount) })),
+      })
+      setNewBill(null)
+      setNewBillFiles([])
+      await load()
+    } catch (error) { setMessage(getApiErrorMessage(error, error?.message || 'Unable to post AP entry.')) }
+    finally { setSaving(false) }
+  }
+
+  const updateBillLine = (index, patch) => setNewBill((old) => ({
+    ...old, lines: old.lines.map((line, i) => i === index ? { ...line, ...patch } : line),
+  }))
+
   const reconciliationTone = data.summary?.reconciliation_status === 'BALANCED' ? 'success' : data.summary?.reconciliation_status === 'FILTERED_VIEW' ? 'neutral' : 'warning'
 
   return <div className="page-stack accounting-page">
-    <Heading title="Accounts Payable" subtitle="Outstanding supplier and expense obligations posted to Accounts Payable, with aging and settlement through business funding sources." onRefresh={load} />
+    <Heading title="Accounts Payable" subtitle="Central dashboard for posted obligations, including inventory receipts, recurring utility bills and other manual AP entries." onRefresh={load}
+      action={hasPermission('expenses', 'CREATE') && hasPermission('expenses', 'POST') ? <button className="primary-button" type="button" onClick={openNewBill}>+ Add AP Entry</button> : null} />
     {message ? <div className="form-alert error">{message}</div> : null}
 
     <section className="cash-flow-card-grid accounting-ap-summary-cards">
@@ -113,15 +158,44 @@ export function AccountsPayablePage() {
     <section className="content-card"><div className="accounting-ops-filters">
       <label className="form-field"><span>As Of</span><input type="date" value={filters.as_of} onChange={(e) => setFilters((c) => ({ ...c, as_of: e.target.value }))} /></label>
       <label className="form-field"><span>Branch</span><SearchableSelect value={filters.branch_id} onChange={(e) => setFilters((c) => ({ ...c, branch_id: e.target.value }))}><option value="">All Branches</option>{(data.options?.branches || []).map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}</SearchableSelect></label>
+      <label className="form-field"><span>Payment Status</span><SearchableSelect value={filters.state} onChange={(e) => setFilters((c) => ({ ...c, state: e.target.value }))}><option value="OPEN">Outstanding</option><option value="PAID">Paid History</option></SearchableSelect></label>
       <label className="form-field"><span>Source</span><SearchableSelect value={filters.source} onChange={(e) => setFilters((c) => ({ ...c, source: e.target.value }))}>{(data.options?.sources || []).map((source) => <option key={source.code} value={source.code}>{source.name}</option>)}</SearchableSelect></label>
+      <label className="form-field"><span>Due From</span><input type="date" value={filters.due_from} onChange={(e) => setFilters((c) => ({ ...c, due_from: e.target.value }))} /></label>
+      <label className="form-field"><span>Due To</span><input type="date" min={filters.due_from || undefined} value={filters.due_to} onChange={(e) => setFilters((c) => ({ ...c, due_to: e.target.value }))} /></label>
       <label className="form-field"><span>Search</span><input value={filters.search} onChange={(e) => setFilters((c) => ({ ...c, search: e.target.value }))} placeholder="AP number, document, payee, reference" /></label>
       <button className="secondary-button accounting-filter-button" type="button" onClick={load}>Apply</button>
     </div></section>
 
-    <section className="content-card"><div className="table-wrap"><table className="data-table"><thead><tr><th>Ref No.</th><th>Type</th><th>Source</th><th>Payee</th><th>Items</th><th>Branch</th><th>Amount Due</th><th>Aging</th><th>Days</th><th>Action</th></tr></thead><tbody>
-      {(data.rows || []).map((row) => <tr key={`${row.source_type}-${row.source_id}`}><td><strong>{row.ap_control_no || '—'}</strong><span className="table-subline">{dateLabel(row.document_date)}</span></td><td>{row.source_type === 'INVENTORY_RECEIPT' ? 'Stock Received' : 'Expense'}</td><td><strong>{row.code}</strong>{row.reference ? <span className="table-subline">{row.reference}</span> : null}</td><td>{row.payee}</td><td>{(row.items || []).length ? row.items.map((item, i) => <div key={item.sku || i}><strong>{item.name || 'Unnamed item'}</strong><span className="table-subline">{item.purchase_quantity} {item.purchase_uom || ''}</span></div>) : '—'}</td><td>{row.branch || '—'}</td><td><strong>{peso(row.outstanding_amount)}</strong></td><td><span className={`status-pill ${row.aging_bucket === 'CURRENT' ? 'success' : row.aging_bucket === 'OVER_90' ? 'danger' : 'warning'}`}>{row.aging_bucket.replace('_',' ')}</span></td><td>{row.age_days} days</td><td><button className="primary-button compact-button" type="button" onClick={() => openPayment(row)}>Pay</button></td></tr>)}
-      {!(data.rows || []).length ? <tr><td colSpan="10"><div className="empty-state">No outstanding accounts payable.</div></td></tr> : null}
+    <section className="content-card"><div className="table-wrap"><table className="data-table"><thead><tr><th>Ref No.</th><th>Type</th><th>Source</th><th>Payee</th><th>Items</th><th>Branch</th><th>Amount Due</th><th>Due Date</th><th>Aging</th><th>Days</th><th>Action</th></tr></thead><tbody>
+      {(data.rows || []).map((row) => <tr key={`${row.source_type}-${row.source_id}`}><td><strong>{row.ap_control_no || '—'}</strong><span className="table-subline">{dateLabel(row.document_date)}</span></td><td>{row.source_type === 'INVENTORY_RECEIPT' ? 'Stock Received' : 'Expense'}</td><td><strong>{row.code}</strong>{row.reference ? <span className="table-subline">{row.reference}</span> : null}</td><td>{row.payee}</td><td>{(row.items || []).length ? row.items.map((item, i) => <div key={item.sku || i}><strong>{item.name || 'Unnamed item'}</strong><span className="table-subline">{item.purchase_quantity} {item.purchase_uom || ''}</span></div>) : '—'}</td><td>{row.branch || '—'}</td><td><strong>{peso(row.outstanding_amount)}</strong></td><td>{dateLabel(row.due_date)}</td><td><span className={`status-pill ${row.aging_bucket === 'CURRENT' ? 'success' : row.aging_bucket === 'OVER_90' ? 'danger' : 'warning'}`}>{row.aging_bucket.replace('_',' ')}</span></td><td>{row.age_days} days</td><td>{row.payment_status === 'PAID' ? <span className="status-pill success">Paid</span> : <button className="primary-button compact-button" type="button" onClick={() => openPayment(row)}>Pay</button>}</td></tr>)}
+      {!(data.rows || []).length ? <tr><td colSpan="11"><div className="empty-state">No outstanding accounts payable.</div></td></tr> : null}
     </tbody></table></div></section>
+
+    {newBill ? <Modal wide title="Add AP Entry" subtitle="Record an unpaid bill. Posting creates one payable and no cash outflow; use Pay after funds are released." onClose={() => !saving && setNewBill(null)}>
+      <form onSubmit={saveNewBill}>
+        {message ? <div className="form-alert error">{message}</div> : null}
+        <div className="form-grid expense-header-form">
+          <label className="form-field"><span>Bill Date (Invoice Date)</span><input type="date" required value={newBill.expense_date} onChange={(e) => setNewBill((b) => ({ ...b, expense_date: e.target.value }))} /></label>
+          <label className="form-field"><span>Due Date</span><input type="date" min={newBill.expense_date} required value={newBill.due_date} onChange={(e) => setNewBill((b) => ({ ...b, due_date: e.target.value }))} /></label>
+          <label className="form-field"><span>Branch</span><SearchableSelect required value={newBill.branch_id} onChange={(e) => setNewBill((b) => ({ ...b, branch_id: e.target.value }))}><option value="">Select branch</option>{newBillOptions.branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}</SearchableSelect></label>
+          <label className="form-field"><span>Payee</span><input required value={newBill.vendor_payee} onChange={(e) => setNewBill((b) => ({ ...b, vendor_payee: e.target.value }))} placeholder="e.g. Electricity provider" /></label>
+          <label className="form-field"><span>Bill / Invoice Reference</span><input required value={newBill.reference} onChange={(e) => setNewBill((b) => ({ ...b, reference: e.target.value }))} placeholder="Use a unique bill number for each billing period" /></label>
+          <label className="form-field accounting-span-2"><span>Description</span><input value={newBill.description} onChange={(e) => setNewBill((b) => ({ ...b, description: e.target.value }))} placeholder="e.g. Electricity - November 2026" /></label>
+        </div>
+        <div className="expense-lines-heading"><div><h3>Account Classification</h3><p>One or more expense/asset accounts. Recurring bills may use the same COA each month with a distinct bill reference.</p></div><button className="secondary-button" type="button" onClick={() => setNewBill((b) => ({ ...b, lines: [...b.lines, { account_id: '', description: '', amount: '' }] }))}>+ Add Line</button></div>
+        <div className="expense-line-list">{newBill.lines.map((line, index) => <div className="expense-line-card" key={index}>
+          <div className="expense-line-number">{index + 1}</div>
+          <label className="form-field expense-line-account"><span>COA</span><SearchableSelect required value={line.account_id} onChange={(e) => updateBillLine(index, { account_id: e.target.value })}><option value="">Select account</option>{newBillOptions.accounts.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</SearchableSelect></label>
+          <label className="form-field expense-line-description"><span>Description</span><input value={line.description} onChange={(e) => updateBillLine(index, { description: e.target.value })} /></label>
+          <label className="form-field expense-line-amount"><span>Amount</span><input type="number" required min="0.01" step="0.01" value={line.amount} onChange={(e) => updateBillLine(index, { amount: e.target.value })} /></label>
+          <button className="secondary-button compact-button expense-line-remove" type="button" disabled={newBill.lines.length === 1} onClick={() => setNewBill((b) => ({ ...b, lines: b.lines.filter((_, i) => i !== index) }))}>Remove</button>
+        </div>)}</div>
+        <div className="expense-lines-total"><span>Total AP</span><strong>{peso(newBill.lines.reduce((sum, line) => sum + Number(line.amount || 0), 0))}</strong></div>
+        <label className="form-field"><span>Notes</span><textarea rows="2" value={newBill.notes} onChange={(e) => setNewBill((b) => ({ ...b, notes: e.target.value }))} /></label>
+        <SupportingDocumentField required files={newBillFiles} onChange={setNewBillFiles} label="Supplier Invoice / Billing Statement" hint="Required for posting and duplicate review." />
+        <div className="modal-actions"><button className="secondary-button" type="button" disabled={saving} onClick={() => setNewBill(null)}>Cancel</button><button className="primary-button" type="submit" disabled={saving}>{saving ? 'Posting…' : 'Post AP Entry'}</button></div>
+      </form>
+    </Modal> : null}
 
     {paying ? <Modal wide title={`Pay ${paying.code}`} subtitle={`Settle ${peso(paying.outstanding_amount)} using one or more business funding sources.`} onClose={() => setPaying(null)}><form onSubmit={pay}>
       {!(data.options?.funding_sources || []).length ? <div className="form-alert warning">No Expense / Supplier Funding Sources are active. Enable one in Chart of Accounts first.</div> : null}

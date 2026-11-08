@@ -20,6 +20,7 @@ export default function InventoryAdjustmentsPage() {
   const { hasPermission } = useAuth()
   const [filters, setFilters] = useState({ branch_id: '', from: monthStart(), to: today(), search: '' })
   const [data, setData] = useState({ branches: [], products: [], requests: [], rows: [] })
+  const [activeSection, setActiveSection] = useState('REQUESTS')
   const [adjust, setAdjust] = useState(null)
   const [review, setReview] = useState(null)
   const [reversing, setReversing] = useState(null)
@@ -154,6 +155,10 @@ export default function InventoryAdjustmentsPage() {
 
     {message ? <div className="form-alert error">{message}</div> : null}
 
+    <div className="booking-tabs" role="tablist" aria-label="Inventory adjustment sections">
+      {[['REQUESTS','Requests'],['POSTED','Posted']].map(([key,title]) => <button key={key} type="button" role="tab" aria-selected={activeSection===key} className={activeSection===key?'active':''} onClick={()=>setActiveSection(key)}>{title}</button>)}
+    </div>
+
     <section className="content-card"><form className="inventory-filter-grid inventory-movement-filters" onSubmit={apply}>
       <label className="form-field"><span>Branch</span><SearchableSelect value={filters.branch_id} onChange={(e)=>setFilters((c)=>({...c,branch_id:e.target.value}))}>{(data.branches||[]).map((row)=><option key={row.id} value={row.id}>{row.name}</option>)}</SearchableSelect></label>
       <label className="form-field"><span>From</span><input type="date" value={filters.from} onChange={(e)=>setFilters((c)=>({...c,from:e.target.value}))} /></label>
@@ -162,19 +167,19 @@ export default function InventoryAdjustmentsPage() {
       <div className="filter-actions-inline"><button className="primary-button">Apply</button><button className="secondary-button" type="button" onClick={reset}>Reset</button></div>
     </form></section>
 
-    <section className="content-card">
+    {activeSection==='REQUESTS' ? <section className="content-card">
       <div className="section-heading compact-section-heading"><div><h2>Adjustment Requests</h2><p>Pending requests do not affect stock until approved.</p></div></div>
       <div className="table-wrap"><table className="data-table"><thead><tr><th>Request</th><th>Type</th><th>Item</th><th>Branch</th><th>Change</th><th>Reason</th><th>Requested By</th><th>Status</th><th className="actions-column">Action</th></tr></thead><tbody>{(data.requests||[]).map((row)=><tr key={row.id}><td><strong>{row.code}</strong><span className="table-subline">{dateTime(row.created_at)}</span></td><td><span className={`status-pill ${row.request_type==='REVERSAL'?'danger':'neutral'}`}>{row.request_type==='REVERSAL'?'Reversal':'Adjustment'}</span></td><td><strong>{row.product?.name}</strong><span className="table-subline">{row.product?.sku}</span></td><td>{row.branch?.name||'—'}</td><td><strong>{row.quantity_change>0?'+':''}{row.quantity_change}</strong> {row.product?.unit||''}</td><td><strong>{row.reason_category?.name || '—'}</strong><span className="table-subline">{row.reason || '—'}</span></td><td>{row.requested_by||'—'}</td><td><span className={`status-pill ${row.status==='APPROVED'?'success':row.status==='REJECTED'?'danger':'warning'}`}>{row.status}</span>{row.reviewed_by?<span className="table-subline">By {row.reviewed_by}</span>:null}</td><td className="action-cell"><ActionMenu items={[
         canApprove && row.status==='PENDING' ? { label: 'Approve', onClick: () => approveRequest(row) } : null,
         canApprove && row.status==='PENDING' ? { label: 'Reject', onClick: () => setReview({ ...row, review_reason_reference_id: '', notes: '' }) } : null,
         canReverse && row.request_type!=='REVERSAL' && row.status==='APPROVED' ? { label: 'Request Reversal', onClick: () => setReversing({ ...row, reason_reference_id: '', reason: '', supporting_files: [] }) } : null,
       ]} /></td></tr>)}{!loading && !(data.requests||[]).length?<tr><td colSpan="9"><div className="empty-state">No stock adjustment requests found.</div></td></tr>:null}</tbody></table></div>
-    </section>
+    </section> : null}
 
-    <section className="content-card">
+    {activeSection==='POSTED' ? <section className="content-card">
       <div className="section-heading compact-section-heading"><div><h2>Posted Adjustment Log</h2><p>Approved adjustments and approved reversals with their before-and-after stock balances.</p></div></div>
       <div className="table-wrap"><table className="data-table"><thead><tr><th>Date / Time</th><th>Type</th><th>Item</th><th>Branch</th><th>Change</th><th>Before</th><th>After</th><th>Cost Snapshot</th><th>Reference</th><th>Reason</th></tr></thead><tbody>{(data.rows||[]).map((row)=><tr key={row.id}><td>{dateTime(row.movement_at)}</td><td><span className={`status-pill ${row.movement_type==='ADJUSTMENT_REVERSAL'?'danger':'neutral'}`}>{row.movement_type==='ADJUSTMENT_REVERSAL'?'Reversal':'Adjustment'}</span></td><td><strong>{row.product?.name}</strong><span className="table-subline">{row.product?.sku}</span></td><td>{row.branch?.name||'—'}</td><td><strong>{row.quantity_change>0?'+':''}{row.quantity_change}</strong></td><td>{row.quantity_before}</td><td>{row.quantity_after}</td><td>{formatPeso(row.unit_cost_snapshot||0)}</td><td>{row.reference_code||'—'}</td><td>{row.reason||'—'}</td></tr>)}{!loading && !(data.rows||[]).length?<tr><td colSpan="10"><div className="empty-state">No approved inventory adjustments found.</div></td></tr>:null}</tbody></table></div>
-    </section>
+    </section> : null}
 
     {adjust ? <Modal title="Request Stock Adjustment" subtitle="The request will not change stock until an authorized approver posts it." onClose={()=>setAdjust(null)}><form className="form-grid" onSubmit={saveAdjustment}>
       <label className="form-field form-span-2"><span>Item Name</span><SearchableSelect required value={adjust.product_id} onChange={(e)=>setAdjust({...adjust,product_id:e.target.value})}><option value="">Select inventory item</option>{(data.products||[]).map((row)=><option key={row.id} value={row.id}>{row.label}</option>)}</SearchableSelect></label>
